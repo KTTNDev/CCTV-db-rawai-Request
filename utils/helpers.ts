@@ -1,4 +1,3 @@
-// URL นี้อาจจะย้ายไปไว้ใน .env ก็ได้
 export const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyrzPMGtKYSVQYtzA0uzV2Rl0-_n6Z3XumyBcvPEMRXmrnn6lBBUa28jD1kS1j-i7glQg/exec"; 
 
 export const convertToBase64 = (file: File): Promise<string> => {

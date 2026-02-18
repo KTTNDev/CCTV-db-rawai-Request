@@ -31,7 +31,6 @@ import { FormDataState, FileState } from '@/types';
 // 1. INTERNAL UI COMPONENTS 
 // ============================================================================
 
-// ✅ Loading Overlay Component
 const LoadingOverlay = () => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
     <div className="bg-white rounded-[2rem] p-10 shadow-2xl flex flex-col items-center max-w-xs w-full mx-6 text-center animate-in zoom-in-95 duration-300 border border-white/20">
@@ -73,40 +72,47 @@ const FileUploader = ({ label, description, icon: Icon = Upload, multiple = fals
   };
 
   const removeFile = (index: number) => {
-    if (Array.isArray(files)) {
+    if (multiple && Array.isArray(files)) {
       onFileChange(files.filter((_: any, i: number) => i !== index));
     } else {
       onFileChange(null);
     }
   };
 
-  const fileList = Array.isArray(files) ? files : (files ? [files] : []);
+  const fileList = multiple ? (Array.isArray(files) ? files : []) : (files ? [files] : []);
 
   return (
     <div className="w-full group">
       <label className="block text-[13px] font-semibold text-slate-600 mb-2 uppercase tracking-wider ml-1">{label}</label>
-      <div className="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-slate-200 border-dashed rounded-3xl bg-slate-50/50 hover:bg-blue-50/40 hover:border-blue-300 transition-all cursor-pointer relative group-hover:shadow-sm">
+      
+      <label className="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-slate-200 border-dashed rounded-3xl bg-slate-50/50 hover:bg-blue-50/40 hover:border-blue-300 transition-all cursor-pointer relative group-hover:shadow-sm">
+        <input 
+          type="file" 
+          className="sr-only" 
+          multiple={multiple} 
+          onChange={handleFileChange} 
+          accept="image/*,.pdf" 
+        />
         <div className="space-y-3 text-center">
           <div className="mx-auto w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-300">
              <Icon className="h-7 w-7 text-slate-400 group-hover:text-blue-600 transition-colors" />
           </div>
           <div className="flex flex-col items-center text-sm text-slate-600 justify-center gap-1">
-            <span className="relative cursor-pointer rounded-md font-bold text-blue-700 hover:text-blue-600 focus-within:outline-none text-base">
-              <span>คลิกเพื่ออัปโหลด</span>
-              <input type="file" className="sr-only" multiple={multiple} onChange={handleFileChange} accept="image/*,.pdf" />
+            <span className="font-bold text-blue-700 hover:text-blue-600 text-base">
+              คลิกเพื่ออัปโหลด
             </span>
             <span className="text-xs text-slate-400 font-medium">{description}</span>
           </div>
         </div>
-      </div>
+      </label>
       
-      {fileList.length > 0 && fileList[0] !== null && (
+      {fileList.length > 0 && (
         <div className="mt-4 space-y-2">
           {fileList.map((file: any, index: number) => (
             <div key={index} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="p-2 bg-blue-50 rounded-xl flex-shrink-0 text-blue-600">
-                    <FileText className="w-5 h-5" />
+                    <FileText className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-semibold text-slate-700 truncate max-w-[200px]">{file?.name}</span>
               </div>
@@ -133,20 +139,15 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement("link");
-      link.id = 'leaflet-css';
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      link.id = 'leaflet-css'; link.rel = "stylesheet"; link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
     }
-
     if (!(window as any).L) {
       const script = document.createElement("script");
       script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.async = true;
-      script.onload = () => setMapLoaded(true);
+      script.async = true; script.onload = () => setMapLoaded(true);
       document.body.appendChild(script);
     } else {
       setMapLoaded(true);
@@ -156,34 +157,21 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
   useEffect(() => {
     if (mapLoaded && mapContainerRef.current && !mapInstanceRef.current && typeof window !== 'undefined') {
       const L = (window as any).L;
-      
-      if (L.Icon.Default.prototype._getIconUrl) {
-          delete L.Icon.Default.prototype._getIconUrl;
-      }
+      if (L.Icon.Default.prototype._getIconUrl) { delete L.Icon.Default.prototype._getIconUrl; }
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
         iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
       });
-
       const defaultLat = initialLat || 7.7818; 
       const defaultLng = initialLng || 98.3125;
       const map = L.map(mapContainerRef.current).setView([defaultLat, defaultLng], 13);
       mapInstanceRef.current = map;
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
       let marker: any = (initialLat && initialLng) ? L.marker([initialLat, initialLng]).addTo(map) : null;
-
       map.on('click', function(e: any) {
         const { lat, lng } = e.latlng;
-        if (marker) {
-          marker.setLatLng([lat, lng]);
-        } else {
-          marker = L.marker([lat, lng]).addTo(map);
-        }
+        if (marker) { marker.setLatLng([lat, lng]); } else { marker = L.marker([lat, lng]).addTo(map); }
         setAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
         onLocationSelect(lat, lng);
       });
@@ -213,7 +201,7 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
 });
 
 // ============================================================================
-// 3. MAIN COMPONENT (RequestView)
+// 2. MAIN COMPONENT (RequestView)
 // ============================================================================
 
 interface RequestViewProps {
@@ -238,7 +226,6 @@ const RequestView: React.FC<RequestViewProps> = ({
   error 
 }) => {
   
-  // โทนสี Gradient (น้ำเงินเข้ม -> เขียว)
   const brandGradient = "linear-gradient(90deg, hsla(222, 51%, 34%, 1) 0%, hsla(119, 37%, 45%, 1) 100%)";
 
   const handleLocationSelect = useCallback((lat: number, lng: number) => {
@@ -259,7 +246,6 @@ const RequestView: React.FC<RequestViewProps> = ({
         </button>
 
         <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden transition-all">
-          {/* Header Section */}
           <div className="p-12 md:p-16 text-center border-b border-slate-100 bg-slate-50/30">
             <div className="inline-flex p-4 bg-white rounded-3xl shadow-sm mb-6 text-blue-900 border border-slate-100">
                <Camera className="w-10 h-10" />
@@ -290,8 +276,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <div className="relative group">
                     <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
                     <input 
-                      required 
-                      type="text" 
+                      required type="text" 
                       className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 text-base shadow-sm"
                       placeholder="ระบุชื่อและนามสกุล"
                       value={formData.name} 
@@ -302,10 +287,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                 <div className="space-y-2">
                   <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เลขประจำตัวประชาชน <span className="text-red-500">*</span></label>
                   <input 
-                    required 
-                    type="text" 
-                    maxLength={13} 
-                    placeholder="X-XXXX-XXXXX-XX-X" 
+                    required type="text" maxLength={13} placeholder="X-XXXX-XXXXX-XX-X" 
                     className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-mono font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 text-base shadow-sm"
                     value={formData.nationalId} 
                     onChange={e => setFormData({...formData, nationalId: e.target.value.replace(/[^0-9]/g, '')})} 
@@ -316,9 +298,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <div className="relative group">
                     <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
                     <input 
-                      required 
-                      type="tel" 
-                      placeholder="08X-XXX-XXXX" 
+                      required type="tel" placeholder="08X-XXX-XXXX" 
                       className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 text-base shadow-sm"
                       value={formData.phone} 
                       onChange={e => setFormData({...formData, phone: e.target.value})} 
@@ -349,8 +329,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <div className="relative group">
                     <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input 
-                      required 
-                      type="date" 
+                      required type="date" 
                       className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 text-base shadow-sm"
                       value={formData.eventDate} 
                       onChange={e => setFormData({...formData, eventDate: e.target.value})} 
@@ -361,16 +340,14 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">ช่วงเวลาที่เกิดเหตุ <span className="text-red-500">*</span></label>
                   <div className="flex items-center gap-4">
                     <input 
-                      required 
-                      type="time" 
+                      required type="time" 
                       className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 text-base shadow-sm text-center"
                       value={formData.eventTimeStart} 
                       onChange={e => setFormData({...formData, eventTimeStart: e.target.value})} 
                     />
                     <span className="font-medium text-slate-400 text-sm">ถึง</span>
                     <input 
-                      required 
-                      type="time" 
+                      required type="time" 
                       className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 text-base shadow-sm text-center"
                       value={formData.eventTimeEnd} 
                       onChange={e => setFormData({...formData, eventTimeEnd: e.target.value})} 
@@ -384,11 +361,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <MapPinIcon className="w-4 h-4 text-blue-600" /> ปักหมุดตำแหน่งที่เกิดเหตุบนแผนที่ <span className="text-red-500">*</span>
                 </label>
                 <div className="rounded-3xl overflow-hidden border-2 border-slate-200 shadow-md">
-                  <LocationPicker 
-                      initialLat={formData.latitude}
-                      initialLng={formData.longitude}
-                      onLocationSelect={handleLocationSelect}
-                  />
+                  <LocationPicker initialLat={formData.latitude} initialLng={formData.longitude} onLocationSelect={handleLocationSelect} />
                 </div>
               </div>
 
@@ -398,8 +371,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                       <div className="relative group">
                           <MapPin className="absolute left-5 top-5 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
                           <input 
-                              required 
-                              type="text" 
+                              required type="text" 
                               className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 placeholder:font-normal placeholder:text-slate-400 text-base shadow-sm"
                               placeholder="เช่น หน้าเสาไฟฟ้าต้นที่ 3 ฝั่งตรงข้าม 7-11"
                               value={formData.location} 
@@ -411,10 +383,9 @@ const RequestView: React.FC<RequestViewProps> = ({
                       <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">ประเภทเหตุการณ์ <span className="text-red-500">*</span></label>
                       <div className="relative group">
                         <select 
-                            required 
-                            className="w-full px-8 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 appearance-none text-base shadow-sm cursor-pointer"
+                            required className="w-full px-8 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-medium text-slate-800 appearance-none text-base shadow-sm cursor-pointer"
                             value={formData.eventType} 
-                            onChange={e => setFormData({...formData, eventType: e.target.value})}
+                            onChange={e => setFormData({...formData, eventType: e.target.value, accidentSubtype: ''})} // รีเซ็ต subtype เมื่อเปลี่ยนประเภทหลัก
                         >
                             <option value="">-- เลือกประเภทเหตุการณ์ --</option>
                             <option value="ACCIDENT">🚗 อุบัติเหตุจราจร</option>
@@ -428,15 +399,37 @@ const RequestView: React.FC<RequestViewProps> = ({
                   </div>
               </div>
 
+              {/* ✅ เพิ่มช่องเลือกลักษณะการเกิดเหตุเฉพาะกรณีอุบัติเหตุ (ACCIDENT) */}
+              {formData.eventType === 'ACCIDENT' && (
+                <div className="mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">ลักษณะการเกิดอุบัติเหตุ <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <select 
+                      required 
+                      className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none font-bold text-blue-900 shadow-sm cursor-pointer focus:ring-4 focus:ring-blue-100 outline-none"
+                      value={formData.accidentSubtype || ''}
+                      onChange={e => setFormData({...formData, accidentSubtype: e.target.value})}
+                    >
+                      <option value="">-- เลือกลักษณะการเกิดเหตุ --</option>
+                      <option value="MC_VS_MC">1. รถจักรยานยนต์ ชน รถจักรยานยนต์</option>
+                      <option value="MC_VS_CAR">2. รถจักรยานยนต์ ชน รถยนต์</option>
+                      <option value="CAR_VS_CAR">3. รถยนต์ ชน รถยนต์</option>
+                      <option value="PEDESTRIAN">4. ชนคนเดินเท้า</option>
+                      <option value="HIT_AND_RUN">5. ชนแล้วหนี</option>
+                      <option value="OTHER">6. อื่นๆ</option>
+                    </select>
+                    <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
               <div className="mt-8 space-y-2">
                 <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">รายละเอียดเหตุการณ์เพิ่มเติม <span className="text-red-500">*</span></label>
                 <textarea 
-                  required 
-                  rows={4} 
+                  required rows={4} 
                   className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[2rem] focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-normal text-slate-800 placeholder:text-slate-400 leading-relaxed text-base shadow-sm resize-none"
                   placeholder="อธิบายลักษณะเหตุการณ์, สีรถ, ทะเบียนรถ หรือลักษณะเด่นของบุคคลที่เกี่ยวข้อง..."
-                  value={formData.description} 
-                  onChange={e => setFormData({...formData, description: e.target.value})} 
+                  value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} 
                 />
               </div>
             </FormSection>
@@ -450,7 +443,8 @@ const RequestView: React.FC<RequestViewProps> = ({
                       description="เห็นข้อมูลหน้าบัตรและชื่อชัดเจน" 
                       icon={User}
                       files={files.idCard}
-                      onFileChange={(f: any) => setFiles((prev) => ({ ...prev, idCard: f[0] || null }))}
+                      // ✅ แก้ไข: รับไฟล์เดี่ยวจาก uploader โดยตรง
+                      onFileChange={(f: any) => setFiles((prev) => ({ ...prev, idCard: f }))}
                   />
                 </div>
                 <div className="space-y-4">
@@ -459,7 +453,8 @@ const RequestView: React.FC<RequestViewProps> = ({
                       description="ใช้เพื่อประกอบการพิจารณาให้รวดเร็วขึ้น" 
                       icon={FileText}
                       files={files.report}
-                      onFileChange={(f: any) => setFiles((prev) => ({ ...prev, report: f[0] || null }))}
+                      // ✅ แก้ไข: รับไฟล์เดี่ยวจาก uploader โดยตรง
+                      onFileChange={(f: any) => setFiles((prev) => ({ ...prev, report: f }))}
                   />
                 </div>
               </div>
@@ -470,6 +465,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   icon={Camera}
                   multiple={true}
                   files={files.scene}
+                  // ✅ สำหรับ multiple uploader จะส่งเป็น array ของไฟล์มาให้
                   onFileChange={(f: any) => setFiles((prev) => ({ ...prev, scene: f }))}
                 />
               </div>
@@ -480,21 +476,12 @@ const RequestView: React.FC<RequestViewProps> = ({
               <p className="text-sm font-medium text-slate-500 mb-6 ml-1">เลือกวิธีการที่ท่านสะดวกรับข้อมูล <span className="text-red-500">*</span></p>
               <div className="grid sm:grid-cols-2 gap-6">
                 <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all shadow-sm hover:shadow-md ${formData.deliveryMethod === 'LINE' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
-                  <input type="radio" name="deliveryMethod" value="LINE" checked={formData.deliveryMethod === 'LINE'}
-                    onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}
-                    className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
-                  <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg">
-                    <QrCode className="w-6 h-6 text-emerald-600" /> LINE OA (แนะนำ)
-                  </span>
+                  <input type="radio" name="deliveryMethod" value="LINE" checked={formData.deliveryMethod === 'LINE'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
+                  <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg"><QrCode className="w-6 h-6 text-emerald-600" /> LINE OA (แนะนำ)</span>
                 </label>
-
                 <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all shadow-sm hover:shadow-md ${formData.deliveryMethod === 'WALKIN' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
-                  <input type="radio" name="deliveryMethod" value="WALKIN" checked={formData.deliveryMethod === 'WALKIN'}
-                    onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}
-                    className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
-                  <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg">
-                    <Footprints className="w-6 h-6 text-blue-600" /> รับด้วยตนเอง
-                  </span>
+                  <input type="radio" name="deliveryMethod" value="WALKIN" checked={formData.deliveryMethod === 'WALKIN'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
+                  <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg"><Footprints className="w-6 h-6 text-blue-600" /> รับด้วยตนเอง</span>
                 </label>
               </div>
 
@@ -502,11 +489,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   {formData.deliveryMethod === 'LINE' ? (
                   <div className="p-8 bg-emerald-50/40 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                       <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center border border-emerald-100 shadow-sm flex-shrink-0">
-                          <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/VDA4zO8`} 
-                            alt="Line OA QR" 
-                            className="w-24 h-24 object-contain mix-blend-multiply" 
-                          />
+                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/VDA4zO8`} alt="Line OA QR" className="w-24 h-24 object-contain mix-blend-multiply" />
                       </div>
                       <div className="text-center md:text-left space-y-2">
                           <p className="font-bold text-emerald-900 text-lg">ขั้นตอนรับไฟล์ผ่าน LINE</p>
@@ -519,49 +502,25 @@ const RequestView: React.FC<RequestViewProps> = ({
                   </div>
                   ) : (
                   <div className="p-8 bg-blue-50/40 rounded-[2.5rem] border border-blue-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                      <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-blue-900 shadow-sm border border-blue-50 flex-shrink-0">
-                          <Info className="w-10 h-10" />
-                      </div>
+                      <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-blue-900 shadow-sm border border-blue-50 flex-shrink-0"><Info className="w-10 h-10" /></div>
                       <div className="space-y-2 text-center md:text-left">
                           <p className="font-bold text-blue-900 text-lg">เงื่อนไขการมารับด้วยตนเอง</p>
-                          <p className="text-slate-700 font-normal leading-relaxed text-sm">
-                              กรุณานำอุปกรณ์เก็บข้อมูล <span className="text-blue-900 font-bold decoration-blue-800 underline underline-offset-2">(Flash Drive / External HDD)</span> มาติดต่อที่ศูนย์ CCTV 
-                              ณ สำนักงานเทศบาลตำบลราไวย์ ในวันและเวลาทำการ <br className="hidden md:block" /> 
-                              <span className="bg-white px-4 py-1.5 rounded-lg border border-blue-100 shadow-sm mt-3 inline-block font-bold text-blue-900 text-sm tracking-tight">จันทร์-ศุกร์ | 08:30 - 16:30 น.</span>
-                          </p>
+                          <p className="text-slate-700 font-normal leading-relaxed text-sm">กรุณานำอุปกรณ์เก็บข้อมูล <span className="text-blue-900 font-bold decoration-blue-800 underline underline-offset-2">(Flash Drive / External HDD)</span> มาติดต่อที่ศูนย์ CCTV ณ สำนักงานเทศบาลตำบลราไวย์ ในวันและเวลาทำการ <br className="hidden md:block" /> <span className="bg-white px-4 py-1.5 rounded-lg border border-blue-100 shadow-sm mt-3 inline-block font-bold text-blue-900 text-sm tracking-tight">จันทร์-ศุกร์ | 08:30 - 16:30 น.</span></p>
                       </div>
                   </div>
                   )}
               </div>
             </FormSection>
 
-            {/* Footer Actions */}
             <div className="pt-12 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-8">
               <div className="flex items-center gap-3 bg-slate-50 px-6 py-3 rounded-full border border-slate-100 shadow-inner">
                   <ShieldCheck className="w-5 h-5 text-blue-700" />
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                    มาตรฐานการคุ้มครองข้อมูล PDPA 100%
-                  </p>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">มาตรฐานการคุ้มครองข้อมูล PDPA 100%</p>
               </div>
               <div className="flex gap-4 w-full sm:w-auto">
-                  <button 
-                      type="button" 
-                      onClick={() => setView('home')} 
-                      className="flex-1 sm:flex-none px-10 py-4 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 text-sm"
-                  >
-                      ยกเลิก
-                  </button>
-                  <button 
-                      type="submit" 
-                      disabled={loading} 
-                      className="flex-1 sm:flex-none px-12 py-4 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3 text-sm"
-                      style={{ background: brandGradient }}
-                  >
-                      {loading ? (
-                          <><Loader2 className="w-5 h-5 animate-spin" /> กำลังประมวลผล...</>
-                      ) : (
-                          <><FileCheck className="w-5 h-5" /> ยืนยันและยื่นคำร้อง</>
-                      )}
+                  <button type="button" onClick={() => setView('home')} className="flex-1 sm:flex-none px-10 py-4 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95 text-sm">ยกเลิก</button>
+                  <button type="submit" disabled={loading} className="flex-1 sm:flex-none px-12 py-4 text-white font-bold rounded-2xl shadow-xl shadow-blue-900/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 text-sm" style={{ background: brandGradient }}>
+                      {loading ? (<><Loader2 className="w-5 h-5 animate-spin" /> กำลังประมวลผล...</>) : (<><FileCheck className="w-5 h-5" /> ยืนยันและยื่นคำร้อง</>)}
                   </button>
               </div>
             </div>

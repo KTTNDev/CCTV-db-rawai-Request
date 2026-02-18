@@ -10,6 +10,9 @@ import { collection, query, where, getCountFromServer } from 'firebase/firestore
  */
 import { db } from '../../lib/firebase';
 
+// ✅ นำเข้าคอมโพเนนต์แผนที่จุดเสี่ยง
+import AccidentMap from '../ui/AccidentMap';
+
 import { 
   Camera, 
   Search, 
@@ -67,7 +70,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
       
       {/* --- ส่วนหัว (Hero Section) --- */}
       <section className="relative pt-20 pb-32 overflow-hidden bg-white">
-        {/* กราฟิกตกแต่งพื้นหลัง (ปรับสีให้เข้ากับธีมใหม่) */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
           <div 
             className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full blur-[150px] opacity-20" 
@@ -77,13 +79,11 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
 
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col items-center text-center space-y-10">
-            {/* สถานะระบบ */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-100 text-teal-800 text-xs font-bold animate-in fade-in duration-700 shadow-sm">
               <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
               <span>Digital CCTV Service Portal - เทศบาลตำบลราไวย์</span>
             </div>
             
-            {/* หัวข้อและคำโปรย */}
             <div className="space-y-6 max-w-4xl">
               <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight leading-[1] mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
                 ขอข้อมูลภาพ <br />
@@ -97,7 +97,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
               </p>
             </div>
 
-            {/* ปุ่มกดหลัก */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-5 animate-in fade-in slide-in-from-bottom-8 duration-1000 w-full sm:w-auto">
               <button 
                 onClick={onRequestClick}
@@ -120,19 +119,19 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
                 </div>
               </button>
             </div>
-
-            {/* สัญลักษณ์ความเชื่อมั่น */}
-            <div className="flex flex-wrap justify-center gap-6 pt-10 mt-4 text-slate-400 text-xs font-bold uppercase tracking-wider border-t border-slate-100 w-full max-w-2xl">
-               <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-teal-500" /> มาตรฐาน PDPA</div>
-               <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-blue-500" /> ให้บริการตลอด 24 ชม.</div>
-               <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-indigo-500" /> ข้อมูลปลอดภัย</div>
-            </div>
           </div>
         </div>
       </section>
 
+      {/* --- ✅ ใหม่: ส่วนแผนที่จุดเสี่ยง (Accident Map Section) --- */}
+      <section className="py-24 bg-slate-50/50">
+        <div className="max-w-6xl mx-auto px-6">
+           <AccidentMap />
+        </div>
+      </section>
+
       {/* --- ส่วนขั้นตอนการรับบริการ (Workflow) --- */}
-      <section className="py-24">
+      <section className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-20 space-y-4">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900">ขั้นตอนการใช้งาน</h2>
@@ -167,7 +166,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
       <section className="py-12">
         <div className="max-w-6xl mx-auto px-6">
           <div className="relative p-12 md:p-20 rounded-[3.5rem] overflow-hidden shadow-2xl" style={{ background: brandGradient }}>
-            {/* Geometric Pattern */}
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <circle cx="90" cy="10" r="30" fill="white" />
@@ -187,7 +185,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
                     </h3>
                     <span className="text-xl opacity-50 font-bold">ราย</span>
                 </div>
-                <p className="text-white/60 text-sm">จำนวนคำร้องที่ผ่านการตรวจสอบแล้ว</p>
               </div>
 
               <div className="space-y-4">
@@ -200,7 +197,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
                       {stats.successRate > 0 ? `${stats.successRate}%` : '---'}
                     </h3>
                 </div>
-                <p className="text-white/60 text-sm">อัตราการดำเนินการสำเร็จลุล่วง</p>
               </div>
 
               <div className="space-y-4">
@@ -214,7 +210,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
                     </h3>
                     <span className="text-xl opacity-50 font-bold">ราย</span>
                 </div>
-                <p className="text-white/60 text-sm">คำร้องที่กำลังเร่งดำเนินการให้ท่าน</p>
               </div>
             </div>
           </div>

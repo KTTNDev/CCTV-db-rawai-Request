@@ -12,7 +12,7 @@ const firebaseConfig = {
   measurementId: "G-9GTGVXJ9X6"
 };
 
-// ป้องกันการ Initialize ซ้ำใน Next.js (Singleton Pattern)
+// Singleton pattern สำหรับ Next.js
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app);
