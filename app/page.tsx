@@ -133,7 +133,33 @@ const App = () => {
         attachments: { idCard: idCardUrl, report: reportUrl, scene: sceneUrls }
       };
 
+      // 1. บันทึกลง Firebase
       await addDoc(collection(db, "cctv_requests"), docData);
+
+      // 2. ✅ ส่งแจ้งเตือนผ่าน LINE Messaging API (Flex Message)
+      // ยิงไปที่ API Route เดียวกัน (/api/notify) แต่ Logic ข้างในเปลี่ยนเป็น Messaging API แล้ว
+      try {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            trackingId: trackingId,
+            name: formData.name,
+            location: formData.location,
+            eventType: formData.eventType,
+            date: formData.eventDate,
+            time: `${formData.eventTimeStart}-${formData.eventTimeEnd}`,
+            // ส่งรูปภาพไปโชว์ใน Flex Message ด้วย (ถ้ามีรูปที่เกิดเหตุ หรือใบแจ้งความ)
+            imageUrl: sceneUrls.length > 0 ? sceneUrls[0] : (reportUrl || idCardUrl)
+          }),
+        });
+      } catch (notifyErr) {
+        console.error("Failed to send LINE Messaging API notification", notifyErr);
+        // ไม่ต้อง throw error เพื่อให้ user ไปหน้า success ได้ตามปกติ
+      }
+
       setSubmissionResult(docData);
       setView('success');
       
@@ -235,8 +261,8 @@ const App = () => {
         )}
 
         {/* ----------------------------------------------------
-           ✅ ระบบเจ้าหน้าที่ (ADMIN / STAFF SYSTEM)
-           ---------------------------------------------------- */}
+            ✅ ระบบเจ้าหน้าที่ (ADMIN / STAFF SYSTEM)
+            ---------------------------------------------------- */}
 
         {/* หน้า Login เจ้าหน้าที่ */}
         {view === 'admin-login' && (
