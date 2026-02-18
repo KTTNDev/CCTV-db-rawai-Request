@@ -23,13 +23,13 @@ export interface FormDataState {
 }
 
 export interface TrackingStatus {
-  // ✅ แก้ไข: เปลี่ยนจาก Union Type เป็น string เพื่อแก้ปัญหา Type mismatch
+  // ✅ แก้ไข: เปลี่ยนเป็น string เพื่อแก้ปัญหา Type mismatch ตอน Build
   status: string; 
   timestamp: any;
   note: string;
 }
 
-// ✅ เพิ่ม interface นี้เข้าไปเพื่อให้ AdminView.tsx ใช้งานได้
+// ✅ เพิ่ม interface นี้เข้าไปเพื่อให้ AdminView.tsx ใช้งานได้ และแก้ Error: Module has no exported member 'CCTVRequest'
 export interface CCTVRequest {
   id: string;
   trackingId: string;

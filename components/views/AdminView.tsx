@@ -25,7 +25,8 @@ import {
   Save, 
   MessageSquare, 
   ChevronDown,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink // ✅ เพิ่ม Import นี้เพื่อให้ Error หายไป
 } from 'lucide-react';
 import { CCTVRequest } from '../../types';
 
