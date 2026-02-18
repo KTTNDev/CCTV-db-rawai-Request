@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getCountFromServer } from 'firebase/firestore';
-
 /**
  * 🛠️ การแก้ไขปัญหา "Could not resolve":
- * เปลี่ยนจาก @/lib/firebase เป็น ../../lib/firebase 
- * เพื่อให้ตรงกับโครงสร้างโฟลเดอร์แบบสัมพัทธ์ (Relative Path)
+ * ใช้ Relative Path เพื่อให้ตัว Build ของคุณหาไฟล์เจอแน่นอน
  */
 import { db } from '../../lib/firebase';
-
-// ✅ นำเข้าคอมโพเนนต์แผนที่จุดเสี่ยง
 import AccidentMap from '../ui/AccidentMap';
 
 import { 
@@ -20,11 +16,13 @@ import {
   Upload, 
   CheckCircle, 
   User, 
-  Activity,
-  ShieldCheck,
-  Zap,
-  Clock,
-  ArrowRight
+  Activity, 
+  ShieldCheck, 
+  Zap, 
+  Clock, 
+  ArrowRight,
+  Lock,
+  Settings
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -34,8 +32,6 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   const [stats, setStats] = useState({ total: 0, successRate: 0, pending: 0 });
-
-  // ✅ ธีมสี Gradient ใหม่ (เขียวมิ้นต์ -> น้ำเงินเข้ม) ตามที่คุณระบุ
   const brandGradient = "linear-gradient(90deg, hsla(160, 50%, 51%, 1) 0%, hsla(247, 60%, 21%, 1) 100%)";
 
   useEffect(() => {
@@ -58,7 +54,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         setStats({ total, successRate: rate, pending });
       } catch (e) {
         console.error("Error fetching stats:", e);
-        // ข้อมูลจำลองสำหรับงานดีไซน์
+        // ข้อมูลจำลอง
         setStats({ total: 1248, successRate: 92, pending: 15 });
       }
     };
@@ -68,92 +64,79 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50/50 font-sans text-slate-900 selection:bg-teal-100">
       
-      {/* --- ส่วนหัว (Hero Section) --- */}
+      {/* --- ส่วน Hero Section --- */}
       <section className="relative pt-20 pb-32 overflow-hidden bg-white">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
           <div 
             className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full blur-[150px] opacity-20" 
-            style={{ background: brandGradient }}
+            style={{ background: brandGradient }} 
           ></div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col items-center text-center space-y-10">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-100 text-teal-800 text-xs font-bold animate-in fade-in duration-700 shadow-sm">
-              <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
-              <span>Digital CCTV Service Portal - เทศบาลตำบลราไวย์</span>
-            </div>
-            
-            <div className="space-y-6 max-w-4xl">
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight leading-[1] mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                ขอข้อมูลภาพ <br />
-                <span className="text-transparent bg-clip-text" style={{ backgroundImage: brandGradient }}>
-                  กล้องวงจรปิด
-                </span>
-              </h1>
-              <p className="text-slate-500 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-medium">
-                ยกระดับความโปร่งใสและเข้าถึงง่ายด้วยระบบยื่นคำร้องดิจิทัล <br className="hidden md:block" />
-                ตรวจสอบได้ทุกที่ ทุกเวลา เพื่อความปลอดภัยสูงสุดของประชาชน
-              </p>
-            </div>
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-100 text-teal-800 text-xs font-bold mb-10 shadow-sm">
+            <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
+            <span>Digital CCTV Service Portal - เทศบาลตำบลราไวย์</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight leading-[1] mb-8">
+            ขอข้อมูลภาพ <br />
+            <span className="text-transparent bg-clip-text" style={{ backgroundImage: brandGradient }}>
+              กล้องวงจรปิด
+            </span>
+          </h1>
+          
+          <p className="max-w-2xl mx-auto text-slate-500 text-lg md:text-xl leading-relaxed mb-12 font-medium">
+            ยกระดับความโปร่งใสและเข้าถึงง่ายด้วยระบบยื่นคำร้องดิจิทัล <br className="hidden md:block" />
+            ตรวจสอบได้ทุกที่ ทุกเวลา เพื่อความปลอดภัยสูงสุดของประชาชน
+          </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5 animate-in fade-in slide-in-from-bottom-8 duration-1000 w-full sm:w-auto">
-              <button 
-                onClick={onRequestClick}
-                className="group relative w-full sm:w-auto px-10 py-5 rounded-2xl text-white font-bold text-lg shadow-2xl hover:shadow-teal-900/20 transition-all hover:scale-105 active:scale-95 overflow-hidden"
-                style={{ background: brandGradient }}
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <Camera className="w-6 h-6" />
-                  <span>ยื่นคำร้องออนไลน์</span>
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setView('track')}
-                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white text-slate-700 font-bold text-lg border border-slate-200 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <Search className="w-5 h-5 text-slate-400" />
-                  <span>ติดตามสถานะ</span>
-                </div>
-              </button>
-            </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full sm:w-auto">
+            <button 
+              onClick={onRequestClick} 
+              className="group relative w-full sm:w-auto px-10 py-5 rounded-2xl text-white font-bold text-lg shadow-2xl hover:shadow-teal-900/20 transition-all hover:scale-105 active:scale-95 overflow-hidden" 
+              style={{ background: brandGradient }} 
+            >
+              <div className="flex items-center justify-center gap-3">
+                <Camera className="w-6 h-6" />
+                <span>ยื่นคำร้องออนไลน์</span>
+              </div>
+            </button>
+            <button 
+              onClick={() => setView('track')} 
+              className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white text-slate-700 font-bold text-lg border border-slate-200 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-95" 
+            >
+              <div className="flex items-center justify-center gap-3">
+                <Search className="w-5 h-5 text-slate-400" />
+                <span>ติดตามสถานะ</span>
+              </div>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* --- ✅ ใหม่: ส่วนแผนที่จุดเสี่ยง (Accident Map Section) --- */}
-      <section className="py-24 bg-slate-50/50">
+      {/* --- ส่วนแผนที่จุดเสี่ยง --- */}
+      <section className="py-24 bg-slate-50/50 border-y border-slate-100">
         <div className="max-w-6xl mx-auto px-6">
            <AccidentMap />
         </div>
       </section>
 
-      {/* --- ส่วนขั้นตอนการรับบริการ (Workflow) --- */}
-      <section className="py-24 bg-white">
+      {/* --- ส่วนขั้นตอนการใช้งาน --- */}
+      <section className="py-24 bg-white text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-20 space-y-4">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900">ขั้นตอนการใช้งาน</h2>
-            <div className="w-24 h-1.5 mx-auto rounded-full" style={{ background: brandGradient }}></div>
-            <p className="text-slate-500 font-medium">สะดวก รวดเร็ว เพียง 4 ขั้นตอน</p>
-          </div>
-          
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-20">ขั้นตอนการใช้งาน</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { icon: FileText, title: "ระบุเหตุการณ์", desc: "กรอกรายละเอียดและปักหมุดจุดเกิดเหตุบนแผนที่ให้ชัดเจน" },
-              { icon: Upload, title: "ส่งเอกสาร", desc: "อัปโหลดภาพบัตรประชาชนและหลักฐานอื่นๆ ผ่านระบบ" },
-              { icon: Activity, title: "รอผลพิจารณา", desc: "เจ้าหน้าที่ตรวจสอบและดำเนินการค้นหาภาพจากระบบ" },
-              { icon: CheckCircle, title: "รับลิงก์ข้อมูล", desc: "รับไฟล์ภาพผ่านช่องทางที่คุณเลือกเมื่อเสร็จสมบูรณ์" }
+              { icon: FileText, title: "ระบุเหตุการณ์", desc: "กรอกรายละเอียดและปักหมุดจุดเกิดเหตุบนแผนที่" },
+              { icon: Upload, title: "ส่งเอกสาร", desc: "อัปโหลดภาพบัตรประชาชนและหลักฐานผ่านระบบ" },
+              { icon: Activity, title: "รอผลพิจารณา", desc: "เจ้าหน้าที่ตรวจสอบและดำเนินการค้นหาภาพ" },
+              { icon: CheckCircle, title: "รับลิงก์ข้อมูล", desc: "รับไฟล์ภาพผ่านช่องทางที่คุณเลือก" }
             ].map((step, idx) => (
-              <div key={idx} className="group relative p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-xl hover:-translate-y-2 hover:border-teal-100">
-                <div 
-                  className="w-16 h-16 rounded-2xl mb-8 flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:-rotate-3" 
-                  style={{ background: brandGradient }}
-                >
+              <div key={idx} className="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all">
+                <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center text-white mx-auto shadow-lg" style={{ background: brandGradient }}>
                   <step.icon className="w-8 h-8" />
                 </div>
-                <div className="text-slate-200 font-black text-5xl mb-4 opacity-30 select-none absolute top-6 right-8">0{idx + 1}</div>
                 <h3 className="text-xl font-bold text-slate-900 mb-3">{step.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
               </div>
@@ -162,80 +145,68 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         </div>
       </section>
 
-      {/* --- ส่วนสถิติและการให้บริการ (Stats Card) --- */}
-      <section className="py-12">
+      {/* --- ส่วนสถิติ --- */}
+      <section className="py-12 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="relative p-12 md:p-20 rounded-[3.5rem] overflow-hidden shadow-2xl" style={{ background: brandGradient }}>
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-              <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <circle cx="90" cy="10" r="30" fill="white" />
-                <path d="M0 100 L100 0 L100 100 Z" fill="white" />
-              </svg>
-            </div>
-            
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-16 text-white text-center md:text-left">
-              <div className="space-y-4">
-                <div className="inline-flex p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10">
-                  <User className="w-6 h-6" />
-                </div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-[0.2em]">Citizens Served</p>
-                <div className="flex items-baseline justify-center md:justify-start gap-2">
-                    <h3 className="text-6xl md:text-7xl font-black tracking-tighter">
-                      {stats.total > 0 ? stats.total.toLocaleString() : '---'}
-                    </h3>
-                    <span className="text-xl opacity-50 font-bold">ราย</span>
-                </div>
+              <div className="space-y-2">
+                <p className="text-white/70 text-xs font-black uppercase tracking-widest">เรื่องในระบบ</p>
+                <h3 className="text-6xl font-black">{stats.total.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3>
               </div>
-
-              <div className="space-y-4">
-                <div className="inline-flex p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10">
-                  <CheckCircle className="w-6 h-6" />
-                </div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-[0.2em]">Efficiency Rate</p>
-                <div className="flex items-baseline justify-center md:justify-start gap-2">
-                    <h3 className="text-6xl md:text-7xl font-black tracking-tighter">
-                      {stats.successRate > 0 ? `${stats.successRate}%` : '---'}
-                    </h3>
-                </div>
+              <div className="space-y-2">
+                <p className="text-white/70 text-xs font-black uppercase tracking-widest">อัตราการความสำเร็จ</p>
+                <h3 className="text-6xl font-black">{stats.successRate}%</h3>
               </div>
-
-              <div className="space-y-4">
-                <div className="inline-flex p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-[0.2em]">Current Tasks</p>
-                <div className="flex items-baseline justify-center md:justify-start gap-2">
-                    <h3 className="text-6xl md:text-7xl font-black tracking-tighter">
-                      {stats.pending > 0 ? stats.pending.toLocaleString() : '---'}
-                    </h3>
-                    <span className="text-xl opacity-50 font-bold">ราย</span>
-                </div>
+              <div className="space-y-2">
+                <p className="text-white/70 text-xs font-black uppercase tracking-widest">รอรับเรื่อง</p>
+                <h3 className="text-6xl font-black">{stats.pending.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- ส่วนความปลอดภัย (Trust Section) --- */}
-      <section className="py-24">
+      {/* --- ส่วนความปลอดภัย & ✅ ทางเข้า Admin (จุดที่คุณต้องการ) --- */}
+      <section className="py-24 bg-slate-50/50">
         <div className="max-w-4xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center gap-10 p-12 bg-white rounded-[3rem] border border-slate-100 shadow-lg shadow-slate-100/50 text-center md:text-left transition-all hover:-translate-y-1">
+          <div className="flex flex-col md:flex-row items-center gap-10 p-12 bg-white rounded-[3rem] border border-slate-100 shadow-lg text-center md:text-left">
             <div className="w-20 h-20 flex-shrink-0 bg-teal-50 rounded-3xl flex items-center justify-center text-teal-600 shadow-inner">
               <ShieldCheck className="w-10 h-10" />
             </div>
             <div className="space-y-3 flex-1">
               <h4 className="text-2xl font-black text-slate-900">ปกป้องข้อมูลตามมาตรฐาน PDPA</h4>
               <p className="text-slate-500 leading-relaxed font-medium">
-                เทศบาลตำบลราไวย์ให้ความสำคัญสูงสุดกับความเป็นส่วนตัว ข้อมูลและภาพหลักฐานทั้งหมดจะได้รับการจัดการอย่างรัดกุมและใช้งานตามที่กฎหมายกำหนดเท่านั้น
+                ข้อมูลและภาพหลักฐานทั้งหมดจะได้รับการจัดการอย่างรัดกุมและใช้งานตามที่กฎหมายกำหนดเท่านั้น
               </p>
             </div>
-            <button className="flex items-center gap-2 text-teal-700 font-bold text-sm hover:gap-4 transition-all group bg-teal-50 px-6 py-3 rounded-xl hover:bg-teal-100">
-              รายละเอียด <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </div>
+
+          {/* ----------------------------------------------------
+             ✅ ปุ่มเชื่อมไปยังหน้า LOGIN สำหรับเจ้าหน้าที่
+             ---------------------------------------------------- */}
+          <div className="mt-24 pt-12 border-t border-slate-200 flex flex-col items-center">
+            <div className="bg-white/80 backdrop-blur-sm p-2 rounded-2xl border border-slate-200 shadow-sm inline-flex items-center gap-1 mb-4">
+               <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                  <Settings className="w-4 h-4" />
+               </div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Staff Portal Access</span>
+            </div>
+            
+            <button 
+              onClick={() => setView('admin-login')} // 👈 คลิกแล้วจะเด้งไปหน้า login ทันที
+              className="flex items-center gap-3 px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl transition-all font-bold text-sm group"
+            >
+              <Lock className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+              เจ้าหน้าที่เทศบาลตำบลราไวย์ เข้าสู่ระบบ
             </button>
+            
+            <p className="mt-4 text-[10px] text-slate-400 font-medium uppercase tracking-tighter opacity-60">
+              Copyright © 2026 Rawai Municipality CCTV Service Portal
+            </p>
           </div>
         </div>
       </section>
-
     </div>
   );
 };

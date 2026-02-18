@@ -8,27 +8,41 @@ import {
 import { 
   signInAnonymously, onAuthStateChanged, User as FirebaseUser 
 } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
-import { uploadFileToGoogleDrive, generateTrackingId } from '@/utils/helpers';
-import { FormDataState, FileState } from '@/types';
 
-// Import Components
-import ConsentModal from '@/components/ui/ConsentModal';
-import HomeView from '@/components/views/HomeView';
-import RequestView from '@/components/views/RequestView';
-import SuccessView from '@/components/views/SuccessView';
-import TrackView from '@/components/views/TrackView';
-import Footer from '@/components/layout/Footer';
-import Navbar from '@/components/layout/Navbar'; // สมมติว่าแยก Navbar แล้ว
+/**
+ * 🛠️ การแก้ไขข้อผิดพลาด "Could not resolve":
+ * เปลี่ยนจากการใช้ @/ มาเป็นการใช้ Relative Path (../)
+ * เพื่อให้ระบบรันโค้ดสามารถค้นหาตำแหน่งไฟล์ในโฟลเดอร์ src ได้ถูกต้อง
+ */
+import { db, auth } from '../lib/firebase';
+import { uploadFileToGoogleDrive, generateTrackingId } from '../utils/helpers';
+import { FormDataState, FileState } from '../types';
+
+// ส่วนประกอบ UI ปกติ
+import ConsentModal from '../components/ui/ConsentModal';
+import HomeView from '../components/views/HomeView';
+import RequestView from '../components/views/RequestView';
+import SuccessView from '../components/views/SuccessView';
+import TrackView from '../components/views/TrackView';
+import Footer from '../components/layout/Footer';
+import Navbar from '../components/layout/Navbar';
+
+// ส่วนประกอบสำหรับเจ้าหน้าที่ (Admin/Staff)
+import AdminLoginView from '../components/views/AdminLoginView';
+import AdminView from '../components/views/AdminView';
 
 const App = () => {
+  // สถานะการควบคุมหน้าจอ: home, request, track, success, admin-login, admin-dashboard
   const [view, setView] = useState('home');
   const [showConsent, setShowConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
-  // Initialize Auth
+  // สถานะตรวจสอบการล็อกอินของเจ้าหน้าที่
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // เริ่มต้นระบบตรวจสอบสิทธิ์แบบไม่ระบุตัวตนสำหรับผู้ใช้ทั่วไป
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -38,6 +52,7 @@ const App = () => {
       }
     };
     initAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
        setUser(currentUser);
     });
@@ -45,25 +60,13 @@ const App = () => {
   }, []);
 
   const [formData, setFormData] = useState<FormDataState>({
-    name: '',
-    nationalId: '',
-    phone: '',
-    email: '',
-    eventDate: '',
-    eventTimeStart: '',
-    eventTimeEnd: '',
-    eventType: '',
-    location: '', 
-    latitude: null,
-    longitude: null,
-    description: '',
-    deliveryMethod: 'LINE'
+    name: '', nationalId: '', phone: '', email: '', eventDate: '',
+    eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '', 
+    latitude: null, longitude: null, description: '', deliveryMethod: 'LINE'
   });
 
   const [files, setFiles] = useState<FileState>({
-    idCard: null,
-    report: null,
-    scene: []
+    idCard: null, report: null, scene: []
   });
 
   const [submissionResult, setSubmissionResult] = useState<any>(null);
@@ -71,9 +74,27 @@ const App = () => {
   const [trackResult, setTrackResult] = useState<any>(null);
 
   const handleRequestClick = () => setShowConsent(true);
+  
   const handleConsentAgree = () => {
     setShowConsent(false);
     setView('request');
+  };
+
+  /**
+   * ✅ ฟังก์ชันเมื่อเจ้าหน้าที่เข้าสู่ระบบสำเร็จ
+   * จะถูกเรียกใช้หลังจากตรวจสอบรหัสผ่านใน AdminLoginView
+   */
+  const handleAdminLoginSuccess = () => {
+    setIsAdmin(true);
+    setView('admin-dashboard');
+  };
+
+  /**
+   * ✅ ฟังก์ชันออกจากระบบเจ้าหน้าที่
+   */
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    setView('home');
   };
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
@@ -83,7 +104,6 @@ const App = () => {
       window.scrollTo(0, 0);
       return;
     }
-
     setLoading(true);
     setError('');
 
@@ -91,7 +111,6 @@ const App = () => {
       const trackingId = generateTrackingId();
       let idCardUrl = '', reportUrl = '', sceneUrls: string[] = [];
 
-      // Parallel Uploads could be implemented here for speed
       if (files.idCard) idCardUrl = await uploadFileToGoogleDrive(files.idCard, trackingId);
       if (files.report) reportUrl = await uploadFileToGoogleDrive(files.report, trackingId);
       if (files.scene.length > 0) {
@@ -118,7 +137,6 @@ const App = () => {
       setSubmissionResult(docData);
       setView('success');
       
-      // Reset Form
       setFormData({
         name: '', nationalId: '', phone: '', email: '', eventDate: '',
         eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '',
@@ -161,41 +179,81 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
-      <Navbar view={view} setView={setView} onRequestClick={handleRequestClick} />
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 flex flex-col selection:bg-blue-100">
+      
+      {/* ซ่อน Navbar ปกติเมื่ออยู่ในส่วนของเจ้าหน้าที่ เพื่อความชัดเจนในการทำงาน */}
+      {!['admin-login', 'admin-dashboard'].includes(view) && (
+        <Navbar 
+          view={view} 
+          setView={setView} 
+          onRequestClick={handleRequestClick} 
+        />
+      )}
 
-      {showConsent && <ConsentModal onAgree={handleConsentAgree} onCancel={() => setShowConsent(false)} />}
+      {showConsent && (
+        <ConsentModal 
+          onAgree={handleConsentAgree} 
+          onCancel={() => setShowConsent(false)} 
+        />
+      )}
 
-      <main className="min-h-[calc(100vh-64px)]">
-        {view === 'home' && <HomeView setView={setView} onRequestClick={handleRequestClick} />}
-        {view === 'request' && <RequestView 
-                                  formData={formData} 
-                                  setFormData={setFormData}
-                                  files={files}
-                                  setFiles={setFiles}
-                                  handleSubmitRequest={handleSubmitRequest} 
-                                  setView={setView} 
-                                  loading={loading} 
-                                  error={error} 
-                                />}
-        {view === 'success' && <SuccessView 
-                                  submissionResult={submissionResult} 
-                                  handleTrackRequest={handleTrackRequest} 
-                                  setTrackingIdInput={setTrackingIdInput} 
-                                  setView={setView} 
-                                />}
-        {view === 'track' && <TrackView 
-                                trackingIdInput={trackingIdInput} 
-                                setTrackingIdInput={setTrackingIdInput} 
-                                handleTrackRequest={handleTrackRequest} 
-                                trackResult={trackResult} 
-                                loading={loading} 
-                                error={error} 
-                                setView={setView} 
-                              />}
+      <main className="flex-grow">
+        {/* หน้าหลักประชาชน */}
+        {view === 'home' && (
+          <HomeView setView={setView} onRequestClick={handleRequestClick} />
+        )}
+        
+        {/* ฟอร์มยื่นคำร้อง */}
+        {view === 'request' && (
+          <RequestView 
+            formData={formData} setFormData={setFormData}
+            files={files} setFiles={setFiles}
+            handleSubmitRequest={handleSubmitRequest} 
+            setView={setView} loading={loading} error={error} 
+          />
+        )}
+        
+        {/* หน้าแจ้งผลสำเร็จ */}
+        {view === 'success' && (
+          <SuccessView 
+            submissionResult={submissionResult} 
+            handleTrackRequest={handleTrackRequest} 
+            setTrackingIdInput={setTrackingIdInput} 
+            setView={setView} 
+          />
+        )}
+        
+        {/* หน้าติดตามสถานะ */}
+        {view === 'track' && (
+          <TrackView 
+            trackingIdInput={trackingIdInput} 
+            setTrackingIdInput={setTrackingIdInput} 
+            handleTrackRequest={handleTrackRequest} 
+            trackResult={trackResult} 
+            loading={loading} error={error} setView={setView} 
+          />
+        )}
+
+        {/* ----------------------------------------------------
+           ✅ ระบบเจ้าหน้าที่ (ADMIN / STAFF SYSTEM)
+           ---------------------------------------------------- */}
+
+        {/* หน้า Login เจ้าหน้าที่ */}
+        {view === 'admin-login' && (
+          <AdminLoginView 
+            setView={setView} 
+            onLoginSuccess={handleAdminLoginSuccess} 
+          />
+        )}
+
+        {/* หน้าแดชบอร์ดหลักของเจ้าหน้าที่ (แสดงเมื่อล็อกอินแล้วเท่านั้น) */}
+        {view === 'admin-dashboard' && isAdmin && (
+          <AdminView onLogout={handleAdminLogout} />
+        )}
       </main>
 
-      <Footer />
+      {/* ซ่อน Footer ปกติเมื่ออยู่ในโหมดเจ้าหน้าที่ */}
+      {!['admin-login', 'admin-dashboard'].includes(view) && <Footer />}
     </div>
   );
 };
