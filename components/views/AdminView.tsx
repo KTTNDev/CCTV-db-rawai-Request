@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  collection, query, onSnapshot, doc, updateDoc, 
+  collection, onSnapshot, doc, updateDoc, 
   arrayUnion 
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+// ✅ ใช้ db จากไฟล์ config หลักของคุณเพื่อให้ใช้งานได้กับฐานข้อมูลจริง
+import { db } from '../../lib/firebase'; 
 import { 
   LayoutDashboard, 
   Search, 
@@ -20,15 +21,70 @@ import {
   Loader2, 
   LogOut, 
   Image as ImageIcon, 
-  ChevronRight, 
   Filter, 
   Save, 
   MessageSquare, 
   ChevronDown,
   ShieldCheck,
-  ExternalLink // ✅ เพิ่ม Import นี้เพื่อให้ Error หายไป
+  ExternalLink,
+  ChevronRight,
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
-import { CCTVRequest } from '../../types';
+
+import { FormDataState, FileState } from '@/types';
+// ============================================================================
+// ฟังก์ชันแปลง URL สำหรับแสดงภาพ Google Drive แบบเสถียรที่สุด
+// ============================================================================
+const getDirectDriveLink = (url: string | undefined | null): string => {
+  if (!url) return '';
+  
+  // ตรวจสอบว่าเป็นลิงก์ Google Drive รูปแบบเดิมหรือไม่
+  if (url.includes('drive.google.com/file/d/')) {
+    // 1. ตัดเอาแค่รหัส ID ของไฟล์ออกมา
+    const fileId = url.split('/d/')[1].split('/view')[0];
+    
+    // 2. นำไปต่อกับ URL สำหรับแสดงภาพตรงๆ ของ Google User Content
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+
+  return url;
+};
+// --- Type Definitions ---
+interface StatusHistoryItem {
+  status: string;
+  timestamp: any;
+  note: string;
+}
+
+interface Attachments {
+  idCard?: string;
+  report?: string;
+  scene?: string[];
+}
+
+interface CCTVRequest {
+  id: string;
+  trackingId?: string;
+  name?: string;
+  nationalId?: string;
+  phone?: string;
+  createdAt?: any;
+  eventDate?: string;
+  eventTimeStart?: string;
+  eventTimeEnd?: string;
+  eventType?: string;
+  accidentSubtype?: string;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string; 
+  status: string;
+  adminNote?: string;
+  statusHistory?: StatusHistoryItem[];
+  attachments?: Attachments;
+  [key: string]: any;
+}
 
 interface AdminViewProps {
   onLogout: () => void;
@@ -47,7 +103,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ รายการข้อความสำเร็จรูป (Templates)
   const messageTemplates = [
     { label: '🟢 พบภาพ (Line OA)', text: "เจ้าหน้าที่ได้ตรวจสอบกล้องวงจรปิดเรียบร้อยแล้ว 'พบภาพเหตุการณ์' ตามที่ท่านแจ้ง กรุณาติดต่อขอรับลิงก์ดาวน์โหลดไฟล์ภาพผ่านทาง Line OA :@745jasmc หรือ QR-Code ที่ปรากฏ โดยแจ้งเลขที่คำร้อง [ID] ให้เจ้าหน้าที่ทราบครับ/ค่ะ" },
     { label: '🟢 พบภาพ (รับเอง)', text: "ตรวจสอบพบภาพเหตุการณ์เรียบร้อยแล้วครับ/ค่ะ ท่านสามารถนำอุปกรณ์จัดเก็บข้อมูลมาติดต่อรับไฟล์ภาพได้ที่ ศูนย์ CCTV เทศบาลตำบลราไวย์ ในวันและเวลาทำการ โปรดเตรียมบัตรประชาชนตัวจริงมาแสดงด้วยครับ/ค่ะ" },
@@ -58,7 +113,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
     { label: '❌ ปฏิเสธ (ขาดใบแจ้งความ)', text: "ไม่สามารถดำเนินการให้ได้เนื่องจากจำเป็นต้องมี 'ใบแจ้งความจากสถานีตำรวจ' แนบมาด้วยเพื่อเป็นหลักฐานทางกฎหมาย รบกวนท่านแนบเอกสารเพิ่มและยื่นคำร้องใหม่อีกครั้งครับ/ค่ะ" },
   ];
 
-  // 1. ดึงข้อมูลแบบ Real-time
   useEffect(() => {
     if (!db) return;
     const q = collection(db, 'cctv_requests');
@@ -75,14 +129,12 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
       }));
       setLoading(false);
     }, (error) => {
-      console.error("Firestore Listen Error:", error);
+      console.error("Firestore Error:", error);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // 2. จัดการแผนที่ Leaflet
   useEffect(() => {
     if (selectedRequest && mapContainerRef.current && typeof window !== 'undefined') {
       const initMap = () => {
@@ -111,7 +163,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
     }
   }, [selectedRequest]);
 
-  // 3. ฟังก์ชันบันทึกการเปลี่ยนแปลง
   const handleSaveChanges = async () => {
     if (!selectedRequest || !tempStatus) return;
     setIsUpdating(true);
@@ -122,13 +173,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
         timestamp: new Date(),
         note: adminNote || `อัปเดตสถานะเป็น: ${tempStatus}`
       };
-      
       await updateDoc(requestRef, {
         status: tempStatus,
         adminNote: adminNote,
         statusHistory: arrayUnion(newHistoryItem)
       });
-
       setSelectedRequest({
         ...selectedRequest,
         status: tempStatus,
@@ -137,7 +186,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
       });
       setAdminNote('');
     } catch (error) {
-      console.error("Error updating status:", error);
+      console.error("Update Error:", error);
     } finally {
       setIsUpdating(false);
     }
@@ -173,27 +222,28 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
       <div className="max-w-[1600px] mx-auto p-4 md:p-8">
         
         {/* Top Header */}
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex justify-between items-center mb-8 md:mb-10">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-              <LayoutDashboard className="w-7 h-7 text-blue-900" />
-              แผงควบคุมเจ้าหน้าที่ <span className="text-blue-600">CCTV RAWAI</span>
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-3">
+              <LayoutDashboard className="w-6 h-6 md:w-7 h-7 text-blue-900" />
+              แผงควบคุม <span className="hidden sm:inline text-blue-600">CCTV RAWAI</span>
+              <span className="sm:hidden text-blue-600">Admin</span>
             </h1>
           </div>
-          <button onClick={onLogout} className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 font-bold text-xs hover:text-red-600 transition-all shadow-sm">
-            <LogOut className="w-4 h-4" /> ออกจากระบบ
+          <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 font-bold text-[10px] md:text-xs hover:text-red-600 transition-all shadow-sm">
+            <LogOut className="w-4 h-4" /> <span className="hidden xs:inline">ออกจากระบบ</span>
           </button>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 mb-8">
+        <div className="bg-white p-3 md:p-4 rounded-2xl md:rounded-[2rem] border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="relative flex-1">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-            <input type="text" placeholder="ค้นหาชื่อผู้แจ้ง หรือ ID..." className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+            <Search className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 h-5 text-slate-300" />
+            <input type="text" placeholder="ค้นหาชื่อผู้แจ้ง หรือ ID..." className="w-full pl-11 md:pl-14 pr-6 py-3 md:py-4 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium text-slate-800 text-sm md:text-base" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           <div className="relative">
             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <select className="pl-10 pr-10 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 appearance-none cursor-pointer hover:bg-slate-100 transition-colors outline-none" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+            <select className="w-full pl-10 pr-10 py-3 md:py-4 bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl font-bold text-slate-700 appearance-none cursor-pointer hover:bg-slate-100 transition-colors outline-none text-sm md:text-base" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
               <option value="all">สถานะทั้งหมด</option>
               <option value="pending">รอตรวจสอบ</option>
               <option value="verifying">ตรวจเอกสาร</option>
@@ -205,13 +255,70 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
           </div>
         </div>
 
-        {/* Main Table */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden mb-12">
+        {/* --- Mobile View: Cards Layout (Hidden on Desktop) --- */}
+        <div className="md:hidden space-y-4 mb-12">
+            {filteredRequests.map((req) => {
+                const status = getStatusConfig(req.status);
+                return (
+                    <div 
+                        key={req.id} 
+                        className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm active:scale-[0.98] transition-all"
+                        onClick={() => { setSelectedRequest(req); setTempStatus(req.status); }}
+                    >
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <p className="font-mono font-bold text-blue-900 text-xs mb-1 uppercase tracking-wider">{req.trackingId}</p>
+                                <h3 className="font-black text-slate-900 text-base">{req.name}</h3>
+                            </div>
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase border ${status.color}`}>
+                                <status.icon className="w-2.5 h-2.5" /> {status.label}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
+                            <div className="space-y-1">
+                                <p className="text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1"><Activity className="w-3 h-3"/> ประเภทเหตุ</p>
+                                <p className="font-black text-slate-700">{req.eventType}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1"><Calendar className="w-3 h-3"/> วันที่เกิดเหตุ</p>
+                                <p className="font-black text-slate-700">{req.eventDate}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                            <div className="flex items-center gap-3">
+                                <p className="text-[9px] font-black text-slate-300 uppercase">เอกสาร:</p>
+                                <div className="flex items-center gap-1.5">
+                                    <div className={`w-2 h-2 rounded-full ${req.attachments?.idCard ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-200'}`} />
+                                    <div className={`w-2 h-2 rounded-full ${req.attachments?.report ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-200'}`} />
+                                    <div className={`w-2 h-2 rounded-full ${req.attachments?.scene && req.attachments.scene.length > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-200'}`} />
+                                </div>
+                            </div>
+                            <button className="flex items-center gap-1 font-black text-blue-600 text-[10px] uppercase">
+                                รายละเอียด <ChevronRight className="w-3 h-3" />
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
+            {filteredRequests.length === 0 && (
+                <div className="bg-white p-10 rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 font-bold text-sm">
+                    ไม่พบข้อมูลคำร้อง
+                </div>
+            )}
+        </div>
+
+        {/* --- Desktop View: Table Layout (Hidden on Mobile) --- */}
+        <div className="hidden md:block bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden mb-12">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tracking ID</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ผู้ยื่นคำร้อง</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">ประเภทเหตุ</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">วันเวลาเกิดเหตุ</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">เอกสาร</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">สถานะ</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">ดำเนินการ</th>
               </tr>
@@ -223,6 +330,20 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
                   <tr key={req.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer" onClick={() => { setSelectedRequest(req); setTempStatus(req.status); }}>
                     <td className="px-8 py-7 font-mono font-bold text-blue-900 text-sm">{req.trackingId}</td>
                     <td className="px-8 py-7 font-black text-slate-900">{req.name}</td>
+                    <td className="px-8 py-7">
+                        <span className="font-bold text-slate-700 text-xs bg-slate-100 px-2 py-1 rounded-md">{req.eventType}</span>
+                    </td>
+                    <td className="px-8 py-7">
+                        <div className="text-sm font-bold text-slate-800">{req.eventDate}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.eventTimeStart}-{req.eventTimeEnd}</div>
+                    </td>
+                    <td className="px-8 py-7">
+                        <div className="flex items-center gap-1.5">
+                           <div className={`w-2 h-2 rounded-full ${req.attachments?.idCard ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-200'}`} title="บัตรประชาชน" />
+                           <div className={`w-2 h-2 rounded-full ${req.attachments?.report ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-200'}`} title="ใบแจ้งความ" />
+                           <div className={`w-2 h-2 rounded-full ${req.attachments?.scene && req.attachments.scene.length > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-200'}`} title="ภาพเหตุการณ์" />
+                        </div>
+                    </td>
                     <td className="px-8 py-7">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${status.color}`}>
                           <status.icon className="w-3 h-3" /> {status.label}
@@ -238,87 +359,133 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
               })}
             </tbody>
           </table>
+          {filteredRequests.length === 0 && (
+                <div className="p-20 text-center text-slate-300 font-bold">ไม่พบข้อมูลคำร้อง</div>
+          )}
         </div>
 
-        {/* Modal: Full Details */}
+        {/* Modal: Full Details (Responsive) */}
         {selectedRequest && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-6xl h-full md:max-h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-10 bg-slate-900/70 backdrop-blur-md">
+            <div className="bg-white w-full max-w-6xl h-[95vh] md:h-full md:max-h-[90vh] rounded-3xl md:rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
               
-              <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-md border border-slate-100 text-blue-900"><FileText className="w-7 h-7" /></div>
+              <div className="p-5 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-3 md:gap-5">
+                  <div className="w-10 h-10 md:w-14 h-14 rounded-xl md:rounded-2xl bg-white flex items-center justify-center shadow-md border border-slate-100 text-blue-900"><FileText className="w-5 h-5 md:w-7 h-7" /></div>
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900">คำร้อง #{selectedRequest.trackingId}</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase mt-1 italic">ได้รับเมื่อ {selectedRequest.createdAt?.seconds ? new Date(selectedRequest.createdAt.seconds * 1000).toLocaleString('th-TH') : 'N/A'}</p>
+                    <h2 className="text-lg md:text-2xl font-black text-slate-900 leading-tight">คำร้อง #{selectedRequest.trackingId}</h2>
+                    <p className="text-[9px] md:text-xs text-slate-400 font-bold uppercase mt-0.5 italic">ได้รับเมื่อ {selectedRequest.createdAt?.seconds ? new Date(selectedRequest.createdAt.seconds * 1000).toLocaleString('th-TH') : 'N/A'}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedRequest(null)} className="p-3 bg-white hover:bg-red-50 hover:text-red-500 rounded-full transition-all text-slate-300 border border-slate-100"><XCircle className="w-8 h-8" /></button>
+                <button onClick={() => setSelectedRequest(null)} className="p-1 md:p-3 bg-white hover:bg-red-50 hover:text-red-500 rounded-full transition-all text-slate-300 border border-slate-100"><XCircle className="w-7 h-7 md:w-8 h-8" /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                  
-                  <div className="lg:col-span-2 space-y-12">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="flex-1 overflow-y-auto p-5 md:p-10 custom-scrollbar">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
+                  <div className="lg:col-span-2 space-y-8 md:space-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                         <section className="space-y-4">
-                          <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600 mb-6 flex items-center gap-2"><User className="w-3 h-3" /> ข้อมูลผู้ยื่น</h4>
-                          <div className="space-y-4 bg-slate-50 p-7 rounded-[2rem] border border-slate-100">
-                            <div><p className="text-[10px] text-slate-400 font-black mb-1">ชื่อ-นามสกุล</p><p className="font-black text-slate-800">{selectedRequest.name}</p></div>
-                            <div><p className="text-[10px] text-slate-400 font-black mb-1">เลขบัตรประชาชน</p><p className="font-bold text-slate-800 font-mono">{selectedRequest.nationalId}</p></div>
-                            <div><p className="text-[10px] text-slate-400 font-black mb-1">เบอร์ติดต่อ</p><p className="font-black text-slate-800">{selectedRequest.phone}</p></div>
+                          <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] text-blue-600 mb-2 md:mb-6 flex items-center gap-2"><User className="w-3 h-3" /> ข้อมูลผู้ยื่น</h4>
+                          <div className="space-y-4 bg-slate-50 p-5 md:p-7 rounded-2xl md:rounded-[2rem] border border-slate-100">
+                            <div><p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-1 uppercase">ชื่อ-นามสกุล</p><p className="font-black text-slate-800 text-sm md:text-base">{selectedRequest.name}</p></div>
+                            <div><p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-1 uppercase">เลขบัตรประชาชน</p><p className="font-bold text-slate-800 font-mono text-sm md:text-base">{selectedRequest.nationalId}</p></div>
+                            <div><p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-1 uppercase">เบอร์ติดต่อ</p><p className="font-black text-slate-800 text-sm md:text-base">{selectedRequest.phone}</p></div>
                           </div>
                         </section>
                         <section className="space-y-4">
-                          <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-blue-600 mb-6 flex items-center gap-2"><Activity className="w-3 h-3" /> ข้อมูลเหตุการณ์</h4>
-                          <div className="space-y-4 bg-slate-50 p-7 rounded-[2rem] border border-slate-100">
-                            <div><p className="text-[10px] text-slate-400 font-black mb-1">วันเวลาเกิดเหตุ</p><p className="font-black text-slate-800">{selectedRequest.eventDate} ({selectedRequest.eventTimeStart}-{selectedRequest.eventTimeEnd})</p></div>
-                            <div><p className="text-[10px] text-slate-400 font-black mb-1">ลักษณะเหตุ</p><p className="font-black text-slate-800">{selectedRequest.eventType} {selectedRequest.accidentSubtype && `(${selectedRequest.accidentSubtype})`}</p></div>
+                          <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] text-blue-600 mb-2 md:mb-6 flex items-center gap-2"><Activity className="w-3 h-3" /> ข้อมูลเหตุการณ์</h4>
+                          <div className="space-y-4 bg-slate-50 p-5 md:p-7 rounded-2xl md:rounded-[2rem] border border-slate-100">
+                            <div><p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-1 uppercase">วันเวลาเกิดเหตุ</p><p className="font-black text-slate-800 text-sm md:text-base">{selectedRequest.eventDate} ({selectedRequest.eventTimeStart}-{selectedRequest.eventTimeEnd})</p></div>
+                            <div><p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-1 uppercase">ลักษณะเหตุ</p><p className="font-black text-slate-800 text-sm md:text-base">{selectedRequest.eventType}</p></div>
+                            
+                            <div className="pt-4 mt-2 border-t border-slate-200/60">
+                                <p className="text-[9px] md:text-[10px] text-slate-400 font-black mb-2 flex items-center gap-1 uppercase"><AlertCircle className="w-3 h-3" /> รายละเอียดเพิ่มเติมจากผู้แจ้ง</p>
+                                <div className="bg-white/80 p-4 rounded-xl md:rounded-2xl border border-slate-100 text-xs md:text-sm text-slate-700 leading-relaxed font-medium min-h-[60px] md:min-h-[80px]">
+                                    {selectedRequest.description || "ไม่ได้ระบุรายละเอียดเพิ่มเติม"}
+                                </div>
+                            </div>
                           </div>
                         </section>
                     </div>
 
-                    {/* Live Map */}
                     <section>
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 mb-6 flex items-center gap-3"><MapPin className="w-4 h-4 text-red-500" /> พิกัดสถานที่เกิดเหตุ</h4>
-                        <div className="grid md:grid-cols-3 gap-6">
-                          <div className="md:col-span-1 bg-white p-7 border border-slate-200 rounded-[2rem] flex flex-col justify-center">
-                              <p className="font-black text-slate-800 text-lg leading-tight mb-4">{selectedRequest.location}</p>
-                              <div className="pt-4 border-t border-slate-100 text-[9px] text-slate-400 font-mono"><p>LAT: {selectedRequest.latitude}</p><p>LNG: {selectedRequest.longitude}</p></div>
+                        <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 mb-4 md:mb-6 flex items-center gap-3"><MapPin className="w-4 h-4 text-red-500" /> พิกัดสถานที่เกิดเหตุ</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                          <div className="md:col-span-1 bg-white p-5 md:p-7 border border-slate-200 rounded-2xl md:rounded-[2rem] flex flex-col justify-center">
+                              <p className="font-black text-slate-800 text-base md:text-lg leading-tight mb-4">{selectedRequest.location}</p>
+                              <div className="pt-4 border-t border-slate-100 text-[8px] md:text-[9px] text-slate-400 font-mono"><p>LAT: {selectedRequest.latitude}</p><p>LNG: {selectedRequest.longitude}</p></div>
                           </div>
-                          <div className="md:col-span-2 h-64 rounded-[2rem] bg-slate-100 border border-slate-200 overflow-hidden relative shadow-inner">
+                          <div className="md:col-span-2 h-48 md:h-64 rounded-2xl md:rounded-[2rem] bg-slate-100 border border-slate-200 overflow-hidden relative shadow-inner">
                               <div ref={mapContainerRef} className="w-full h-full z-0" />
                           </div>
                         </div>
                     </section>
 
-                    {/* Evidence Images */}
-                    <section>
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 mb-8 flex items-center gap-2"><ImageIcon className="w-4 h-4" /> เอกสารและหลักฐาน</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                          {[
-                            { label: 'บัตรประชาชน', url: selectedRequest.attachments?.idCard },
-                            { label: 'ใบแจ้งความ', url: selectedRequest.attachments?.report },
-                            ...(selectedRequest.attachments?.scene || []).map((url: string, i: number) => ({ label: `ภาพเหตุการณ์ ${i+1}`, url }))
-                          ].map((file, i) => file.url ? (
-                            <a key={i} href={file.url} target="_blank" rel="noopener noreferrer" className="group relative h-44 rounded-3xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm transition-all hover:ring-8 hover:ring-blue-50/50">
-                               <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10"><ExternalLink className="text-white w-7 h-7" /></div>
-                               <img src={file.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={file.label} />
-                               <div className="absolute bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md text-[10px] font-black uppercase text-center border-t border-slate-100 text-slate-600">{file.label}</div>
-                            </a>
-                          ) : <div key={i} className="h-44 rounded-3xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300"><ImageIcon className="w-8 h-8 mb-1" /><span className="text-[9px] font-bold">ไม่มีข้อมูล</span></div>)}
-                        </div>
+                    <section className="pb-10 md:pb-0">
+                   <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 mb-6 md:mb-8 flex items-center gap-2">
+    <ImageIcon className="w-4 h-4" /> เอกสารและหลักฐาน
+</h4>
+<div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+  {[
+    { label: 'บัตรประชาชน', url: selectedRequest.attachments?.idCard },
+    { label: 'ใบแจ้งความ', url: selectedRequest.attachments?.report },
+    ...(selectedRequest.attachments?.scene || []).map((url: string, i: number) => ({ label: `ภาพเหตุการณ์ ${i+1}`, url }))
+  ].map((file, i) => {
+    // ถ้าไม่มีไฟล์ ให้แสดงกล่องเปล่า
+    if (!file.url) {
+      return (
+        <div key={i} className="h-32 md:h-44 rounded-2xl md:rounded-3xl bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
+          <ImageIcon className="w-6 h-6 md:w-8 h-8 mb-1" />
+          <span className="text-[8px] md:text-[9px] font-bold uppercase">ไม่มีข้อมูล</span>
+        </div>
+      );
+    }
+
+    // แปลง URL ให้เป็นแบบที่คุณฟลุ๊คเทสแล้วรูปขึ้น
+    let imageUrl = file.url;
+    if (file.url.includes('drive.google.com/file/d/')) {
+        const fileId = file.url.split('/file/d/')[1].split('/')[0];
+        // ✅ ใช้ URL แบบ googleusercontent และต่อด้วย fileId
+        imageUrl = `https://lh3.googleusercontent.com/d/${fileId}`; 
+    }
+
+    return (
+      // 🛑 ใช้ <div> แทน <a> เพื่อแก้ปัญหาแท็กตีกันจนรูปไม่ขึ้น
+      <div key={i} className="group relative h-32 md:h-44 rounded-2xl md:rounded-3xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm transition-all hover:ring-8 hover:ring-blue-50/50">
+         
+         {/* ✅ ใช้แท็ก img src ตรงๆ แบบที่คุณฟลุ๊คทำ */}
+         <img 
+            src={imageUrl} 
+            className="w-full h-full object-cover transition-transform group-hover:scale-110" 
+            alt={file.label} 
+            onError={(e) => {
+                // ตัวกันเหนียว: ถ้ารูปบั๊ก ให้สลับไปใช้ลิงก์ Thumbnail ของ Google แทน
+                e.currentTarget.src = `https://drive.google.com/thumbnail?id=${file.url.split('/file/d/')[1]?.split('/')[0]}&sz=w1000`;
+            }}
+         />
+         
+         <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-white/95 backdrop-blur-md text-[8px] md:text-[10px] font-black uppercase text-center border-t border-slate-100 text-slate-600">
+           {file.label}
+         </div>
+         
+         {/* ปุ่มสำหรับกดคลิกดูรูปเต็มจอ (ซ่อนอยู่ จะโผล่มาตอนเอาเมาส์ชี้) */}
+         <a href={file.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10" title="เปิดดูรูปเต็ม">
+            <ExternalLink className="text-white w-5 h-5 md:w-7 h-7" />
+         </a>
+      </div>
+    );
+  })}
+</div>
                     </section>
                   </div>
 
-                  {/* Right Column: Admin Control */}
-                  <div className="space-y-10">
-                    <div className="bg-slate-900 rounded-[2.5rem] p-9 text-white shadow-2xl relative overflow-hidden">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-8 relative z-10">Admin Control Panel</h4>
-                      <div className="space-y-8 relative z-10">
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase text-slate-500 block ml-1 tracking-[0.2em]">เลือกสถานะ</label>
-                          <div className="grid grid-cols-1 gap-2.5">
+                  <div className="space-y-8 md:space-y-10">
+                    <div className="bg-slate-900 rounded-3xl md:rounded-[2.5rem] p-6 md:p-9 text-white shadow-2xl relative overflow-hidden">
+                      <h4 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-6 md:mb-8 relative z-10">Admin Control Panel</h4>
+                      <div className="space-y-6 md:space-y-8 relative z-10">
+                        <div className="space-y-3 md:space-y-4">
+                          <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 block ml-1 tracking-[0.2em]">เลือกสถานะ</label>
+                          <div className="grid grid-cols-1 gap-2">
                              {[
                                { val: 'pending', label: 'รอการตรวจสอบ', color: 'hover:bg-amber-600' },
                                { val: 'verifying', label: 'ตรวจสอบเอกสาร', color: 'hover:bg-blue-600' },
@@ -326,22 +493,21 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
                                { val: 'completed', label: 'ดำเนินการสำเร็จ', color: 'hover:bg-emerald-600' },
                                { val: 'rejected', label: 'ปฏิเสธ/ยกเลิก', color: 'hover:bg-red-600' }
                              ].map(opt => (
-                               <button key={opt.val} onClick={() => setTempStatus(opt.val)} className={`w-full py-4 px-6 rounded-2xl text-[11px] font-black text-left transition-all border border-white/5 uppercase tracking-widest ${tempStatus === opt.val ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white ' + opt.color}`}>{opt.label}</button>
+                               <button key={opt.val} onClick={() => setTempStatus(opt.val)} className={`w-full py-3 md:py-4 px-5 md:px-6 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black text-left transition-all border border-white/5 uppercase tracking-widest ${tempStatus === opt.val ? 'bg-white text-slate-900 shadow-xl' : 'text-slate-400 hover:text-white ' + opt.color}`}>{opt.label}</button>
                              ))}
                           </div>
                         </div>
 
-                        {/* Template Section */}
-                        <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase text-slate-500 block ml-1 flex items-center gap-2 tracking-[0.2em]">
+                        <div className="space-y-3 md:space-y-4">
+                          <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 block ml-1 flex items-center gap-2 tracking-[0.2em]">
                             <MessageSquare className="w-3 h-3" /> ข้อความตอบกลับสำเร็จรูป
                           </label>
                           <div className="relative group">
                             <select 
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold text-slate-300 outline-none appearance-none cursor-pointer hover:bg-white/10 transition-all pr-12"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl px-4 md:px-5 py-3 md:py-4 text-[10px] md:text-xs font-bold text-slate-300 outline-none appearance-none cursor-pointer hover:bg-white/10 transition-all pr-12"
                               onChange={(e) => {
                                 const val = e.target.value;
-                                if(val) setAdminNote(val.replace('[ID]', selectedRequest.trackingId));
+                                if(val) setAdminNote(val.replace('[ID]', selectedRequest?.trackingId || 'N/A'));
                                 e.target.value = "";
                               }}
                             >
@@ -350,51 +516,40 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
                                 <option key={idx} value={t.text} className="bg-slate-900 text-white py-2">{t.label}</option>
                               ))}
                             </select>
-                            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
                           </div>
-                          
-                          <textarea 
-                            rows={4}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm outline-none focus:ring-4 focus:ring-blue-500/20 focus:bg-white/10 transition-all font-medium placeholder:text-slate-700 leading-relaxed"
-                            placeholder="ระบุรายละเอียด หรือใช้ข้อความสำเร็จรูปด้านบน..."
-                            value={adminNote}
-                            onChange={e => setAdminNote(e.target.value)}
-                          />
+                          <textarea rows={4} className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 text-xs md:text-sm outline-none focus:ring-4 focus:ring-blue-500/20 focus:bg-white/10 transition-all font-medium placeholder:text-slate-700 leading-relaxed" placeholder="ระบุรายละเอียด..." value={adminNote} onChange={e => setAdminNote(e.target.value)} />
                         </div>
 
-                        <button onClick={handleSaveChanges} disabled={isUpdating || !tempStatus} className="w-full py-5 rounded-2xl bg-blue-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-3 transition-all">
-                          {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        <button onClick={handleSaveChanges} disabled={isUpdating || !tempStatus} className="w-full py-4 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-black text-xs md:text-sm uppercase tracking-[0.2em] shadow-xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-3 transition-all">
+                          {isUpdating ? <Loader2 className="w-4 h-4 md:w-5 h-5 animate-spin" /> : <Save className="w-4 h-4 md:w-5 h-5" />}
                           {isUpdating ? 'กำลังบันทึก...' : 'บันทึกการอัปเดต'}
                         </button>
                       </div>
                     </div>
 
-                    {/* History */}
-                    <div className="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-10">ประวัติการดำเนินการ</h4>
-                        <div className="space-y-10">
+                    <div className="p-6 md:p-8 bg-white rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm">
+                        <h4 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-8 md:mb-10 uppercase">ประวัติการดำเนินการ</h4>
+                        <div className="space-y-8 md:space-y-10">
                           {selectedRequest.statusHistory?.map((h, i) => (
-                            <div key={i} className="relative pl-8">
-                               {/* ✅ แก้ไขตรงนี้: เพิ่ม || 0 เพื่อกัน error ถ้า statusHistory เป็น undefined */}
-                               {i !== (selectedRequest.statusHistory?.length || 0) - 1 && <div className="absolute left-[3px] top-6 bottom-[-40px] w-0.5 bg-slate-100"></div>}
+                            <div key={i} className="relative pl-7 md:pl-8">
+                               {i !== (selectedRequest.statusHistory?.length || 0) - 1 && <div className="absolute left-[3px] top-6 bottom-[-32px] md:bottom-[-40px] w-0.5 bg-slate-100"></div>}
                                <div className="absolute left-0 top-1.5 w-2 h-2 rounded-full bg-blue-600 ring-4 ring-blue-50"></div>
                                <div>
-                                  <p className="text-xs font-black text-slate-800 uppercase">{h.status}</p>
-                                  <p className="text-[9px] text-slate-400 font-bold mb-3">{h.timestamp?.seconds ? new Date(h.timestamp.seconds * 1000).toLocaleString('th-TH') : 'Just now'}</p>
-                                  <p className="text-xs text-slate-500 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 italic">"{h.note}"</p>
+                                  <p className="text-[10px] md:text-xs font-black text-slate-800 uppercase">{h.status}</p>
+                                  <p className="text-[8px] md:text-[9px] text-slate-400 font-bold mb-3">{h.timestamp?.seconds ? new Date(h.timestamp.seconds * 1000).toLocaleString('th-TH') : 'Just now'}</p>
+                                  <p className="text-[10px] md:text-xs text-slate-500 font-medium leading-relaxed bg-slate-50 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-100 italic">"{h.note}"</p>
                                </div>
                             </div>
                           ))}
                         </div>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

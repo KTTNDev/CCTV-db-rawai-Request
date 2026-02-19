@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-// ✅ รับค่าจาก Environment Variable
-const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-const LINE_USER_ID = process.env.LINE_ADMIN_USER_ID;
+// ✅ กำหนดค่า Token และ User ID โดยตรง (Hardcode) เพื่อแก้ปัญหา Env ใน Production
+const LINE_ACCESS_TOKEN = 'Zsi6LhekjfWWoyFg3ETQkMB2mWQHghqrP/D7hK64nRxbwn9yuohySkfGV1fTDFAS+e2DLZpi4uj6RLPomGIEzOMj9UYPEgmt+MF1lhYg3XFc5joRtZinOFLKX+7wrYrGfNH0hkpIofpuXulbsqzyjQdB04t89/1O/w1cDnyilFU=';
+const LINE_USER_ID = 'Uf48f33e8bed20800686a966487810b18';
 
 // 🎨 กำหนดสีตามความเร่งด่วน/ประเภท
 const EVENT_COLORS: Record<string, string> = {
@@ -15,9 +15,17 @@ const EVENT_COLORS: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    if (!LINE_ACCESS_TOKEN || !LINE_USER_ID) {
-        console.error("LINE Config missing");
-        return NextResponse.json({ success: false, error: 'LINE Config Missing' }, { status: 500 });
+    // 🔍 Debug: เช็คว่าใน Production มีค่าเหล่านี้หรือไม่ (Log จะไปขึ้นใน Console ของ Hosting ที่ใช้)
+    console.log("🔔 API Notify Started...");
+    
+    if (!LINE_ACCESS_TOKEN) {
+        console.error("❌ Error: LINE_CHANNEL_ACCESS_TOKEN missing");
+        return NextResponse.json({ success: false, error: 'LINE Token Missing' }, { status: 500 });
+    }
+    
+    if (!LINE_USER_ID) {
+        console.error("❌ Error: LINE_ADMIN_USER_ID missing");
+        return NextResponse.json({ success: false, error: 'LINE User ID Missing' }, { status: 500 });
     }
 
     const body = await request.json();
@@ -29,6 +37,8 @@ export async function POST(request: Request) {
       date, 
       time
     } = body;
+
+    console.log(`📝 Processing notification for: ${trackingId}`);
 
     // 1. เลือกสีตามประเภทเหตุการณ์
     const eventKey = Object.keys(EVENT_COLORS).find(k => eventType.includes(k)) || 'default';
@@ -201,14 +211,15 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Line Messaging API Error:', errorText);
+      console.error('❌ Line API Error:', errorText);
       return NextResponse.json({ success: false, error: errorText }, { status: response.status });
     }
 
+    console.log('✅ Notification Sent Successfully');
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('❌ Internal Server Error:', error);
     return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }

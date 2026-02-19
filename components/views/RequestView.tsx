@@ -26,7 +26,23 @@ import {
 } from 'lucide-react';
 
 import { FormDataState, FileState } from '@/types';
+// ============================================================================
+// ฟังก์ชันแปลง URL สำหรับแสดงภาพ Google Drive แบบเสถียรที่สุด
+// ============================================================================
+const getDirectDriveLink = (url: string | undefined | null): string => {
+  if (!url) return '';
+  
+  // ตรวจสอบว่าเป็นลิงก์ Google Drive รูปแบบเดิมหรือไม่
+  if (url.includes('drive.google.com/file/d/')) {
+    // 1. ตัดเอาแค่รหัส ID ของไฟล์ออกมา
+    const fileId = url.split('/d/')[1].split('/view')[0];
+    
+    // 2. นำไปต่อกับ URL สำหรับแสดงภาพตรงๆ ของ Google User Content
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
 
+  return url;
+};
 // ============================================================================
 // 1. INTERNAL UI COMPONENTS 
 // ============================================================================
@@ -443,7 +459,6 @@ const RequestView: React.FC<RequestViewProps> = ({
                       description="เห็นข้อมูลหน้าบัตรและชื่อชัดเจน" 
                       icon={User}
                       files={files.idCard}
-                      // ✅ แก้ไข: รับไฟล์เดี่ยวจาก uploader โดยตรง
                       onFileChange={(f: any) => setFiles((prev) => ({ ...prev, idCard: f }))}
                   />
                 </div>
@@ -453,7 +468,6 @@ const RequestView: React.FC<RequestViewProps> = ({
                       description="ใช้เพื่อประกอบการพิจารณาให้รวดเร็วขึ้น" 
                       icon={FileText}
                       files={files.report}
-                      // ✅ แก้ไข: รับไฟล์เดี่ยวจาก uploader โดยตรง
                       onFileChange={(f: any) => setFiles((prev) => ({ ...prev, report: f }))}
                   />
                 </div>
@@ -465,7 +479,6 @@ const RequestView: React.FC<RequestViewProps> = ({
                   icon={Camera}
                   multiple={true}
                   files={files.scene}
-                  // ✅ สำหรับ multiple uploader จะส่งเป็น array ของไฟล์มาให้
                   onFileChange={(f: any) => setFiles((prev) => ({ ...prev, scene: f }))}
                 />
               </div>
