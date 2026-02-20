@@ -5,21 +5,18 @@ import { Navigation, MapPin as MapPinIcon } from 'lucide-react';
 
 interface LocationPickerProps {
   onLocationSelect: (lat: number, lng: number) => void;
-  initialLat?: number;
-  initialLng?: number;
+  initialLat: number | null; 
+  initialLng: number | null;
 }
-
 const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }: LocationPickerProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [address, setAddress] = useState('');
 
-  // 🛠️ โหลด Leaflet Script และ CSS อัตโนมัติเมื่อ Component ทำงาน
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // โหลด CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement("link");
       link.id = 'leaflet-css';
@@ -28,7 +25,6 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
       document.head.appendChild(link);
     }
 
-    // โหลด JS
     if (!(window as any).L) {
       const script = document.createElement("script");
       script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -40,12 +36,10 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
     }
   }, []);
 
-  // 🛠️ เริ่มต้นสร้างแผนที่เมื่อทุกอย่างพร้อม
   useEffect(() => {
     if (mapLoaded && mapContainerRef.current && !mapInstanceRef.current && typeof window !== 'undefined') {
       const L = (window as any).L;
 
-      // แก้ไขปัญหาไอคอน Marker ไม่แสดงผล (Default ของ Leaflet ใน Next.js)
       if (L.Icon.Default.prototype._getIconUrl) {
         delete L.Icon.Default.prototype._getIconUrl;
       }
@@ -65,12 +59,11 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // สร้าง Marker เริ่มต้นถ้ามีข้อมูลเก่า
-      let marker: any = (initialLat && initialLng) 
+      // ✅ ปรับการเช็ค Marker ให้ปลอดภัยขึ้น
+      let marker: any = (typeof initialLat === 'number' && typeof initialLng === 'number') 
         ? L.marker([initialLat, initialLng]).addTo(map) 
         : null;
 
-      // เหตุการณ์เมื่อคลิกบนแผนที่
       map.on('click', function(e: any) {
         const { lat, lng } = e.latlng;
         if (marker) {
@@ -100,15 +93,16 @@ const LocationPicker = React.memo(({ onLocationSelect, initialLat, initialLng }:
           <span className="flex items-center gap-1.5">
             <MapPinIcon className="w-3.5 h-3.5" /> แตะที่แผนที่เพื่อปักหมุดตำแหน่งที่เกิดเหตุ
           </span>
-          <span className="bg-slate-100 px-3 py-1 rounded-full text-blue-700 tracking-wide font-mono font-bold border border-slate-200">
-            {address || (initialLat ? `${initialLat.toFixed(6)}, ${initialLng.toFixed(6)}` : 'รอระบุพิกัด')}
-          </span>
+         <span className="bg-slate-100 px-3 py-1 rounded-full text-blue-700 tracking-wide font-mono font-bold border border-slate-200">
+  {address || (initialLat !== null && initialLng !== null 
+    ? `${initialLat.toFixed(6)}, ${initialLng.toFixed(6)}` 
+    : 'รอระบุพิกัด')}
+</span>
        </div>
     </div>
   );
 });
 
-// ตั้งชื่อให้ Component เพื่อใช้คู่กับ React.memo
 LocationPicker.displayName = 'LocationPicker';
 
 export default LocationPicker;

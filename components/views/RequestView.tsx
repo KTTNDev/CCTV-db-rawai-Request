@@ -7,6 +7,7 @@ import {
   Loader2, QrCode, Footprints, Info, MapPin, FileText, X 
 } from 'lucide-react';
 
+// ✅ Import ชิ้นส่วนที่เราสร้างแยกไว้
 import FormSection from '../forms/FormSection';
 import LoadingOverlay from '../forms/LoadingOverlay';
 import FileUploader from '../forms/FileUploader';
@@ -31,10 +32,13 @@ const RequestView: React.FC<RequestViewProps> = ({
 }) => {
   
   const brandGradient = "linear-gradient(90deg, hsla(222, 51%, 34%, 1) 0%, hsla(119, 37%, 45%, 1) 100%)";
+
+  // 🔔 1. State สำหรับระบบแจ้งเตือน Toast สุดคลีน
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
 
   const showToast = (message: string, type: 'error' | 'success' = 'error') => {
     setNotification({ message, type });
+    // ตั้งเวลาให้หายไปเองภายใน 4 วินาที
     setTimeout(() => setNotification(null), 4000);
   };
 
@@ -42,26 +46,29 @@ const RequestView: React.FC<RequestViewProps> = ({
     setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }));
   }, [setFormData]);
 
-  // 🛡️ ฟังก์ชันตรวจสอบข้อมูล (Validation) ฉบับบังคับ 2 เอกสาร
+  // 🛡️ 2. ฟังก์ชันตรวจสอบข้อมูล (Validation Gatekeeper) ฉบับบังคับ 2 เอกสาร
   const handleLocalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. เช็ครูปถ่ายบัตรประชาชน (บังคับ)
+    // เช็ครูปถ่ายบัตรประชาชน (บังคับ)
     if (!files.idCard) {
       showToast("กรุณาอัปโหลดรูปถ่ายบัตรประชาชนเพื่อยืนยันตัวตน");
       return;
     }
     
-    // 2. เช็คใบแจ้งความ (บังคับใหม่ตามคำขอคุณฟลุ๊ค)
+    // เช็คใบแจ้งความ (บังคับใหม่)
     if (!files.report) {
       showToast("กรุณาอัปโหลดใบแจ้งความเพื่อใช้ประกอบการพิจารณา");
       return;
     }
 
+    // เช็คการปักหมุดแผนที่
     if (!formData.latitude || !formData.longitude) {
       showToast("กรุณาปักหมุดตำแหน่งที่เกิดเหตุบนแผนที่");
       return;
     }
+
+    // เช็คความครบถ้วนของข้อมูลส่วนตัว
     if (formData.nationalId.length !== 13) {
       showToast("กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก");
       return;
@@ -70,11 +77,14 @@ const RequestView: React.FC<RequestViewProps> = ({
       showToast("กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง");
       return;
     }
+
+    // เช็คประเภทเหตุการณ์
     if (formData.eventType === 'ACCIDENT' && !formData.accidentSubtype) {
       showToast("กรุณาระบุลักษณะการเกิดอุบัติเหตุ");
       return;
     }
 
+    // ✅ ถ้าผ่านทุกด่าน ให้ส่งข้อมูลจริง
     await handleSubmitRequest(e);
   };
 
@@ -82,10 +92,13 @@ const RequestView: React.FC<RequestViewProps> = ({
     <>
       {loading && <LoadingOverlay />}
 
+      {/* 🔔 UI ระบบแจ้งเตือน Floating Toast (โผล่จากด้านบน) */}
       {notification && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[200] animate-in fade-in slide-in-from-top-4 duration-300 px-6 w-full max-w-md">
           <div className={`px-6 py-4 rounded-[1.5rem] shadow-2xl backdrop-blur-xl border flex items-center gap-4 ${
-            notification.type === 'error' ? 'bg-red-50/90 border-red-200 text-red-800' : 'bg-emerald-50/90 border-emerald-200 text-emerald-800'
+            notification.type === 'error' 
+              ? 'bg-red-50/90 border-red-200 text-red-800' 
+              : 'bg-emerald-50/90 border-emerald-200 text-emerald-800'
           }`}>
             <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
               notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
@@ -93,10 +106,12 @@ const RequestView: React.FC<RequestViewProps> = ({
               {notification.type === 'error' ? <AlertCircle className="w-6 h-6" /> : <CheckCircle2 className="w-6 h-6" />}
             </div>
             <div className="flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">System Message</p>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5 text-slate-500">System Notification</p>
               <p className="font-bold text-sm leading-tight">{notification.message}</p>
             </div>
-            <button onClick={() => setNotification(null)} className="p-1 hover:bg-black/5 rounded-lg transition-colors"><X className="w-4 h-4 opacity-30" /></button>
+            <button onClick={() => setNotification(null)} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
+              <X className="w-4 h-4 opacity-30" />
+            </button>
           </div>
         </div>
       )}
@@ -114,6 +129,15 @@ const RequestView: React.FC<RequestViewProps> = ({
           </div>
 
           <form onSubmit={handleLocalSubmit} className="p-8 md:p-16 space-y-16">
+            {/* 🚩 แสดง Error จาก Firebase (ถ้ามี) */}
+            {error && (
+              <div className="p-6 bg-red-50 text-red-900 rounded-3xl flex items-start gap-4 border border-red-100 animate-in zoom-in-95 shadow-sm">
+                <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5 text-red-600" />
+                <div><p className="font-bold text-lg mb-1">พบข้อผิดพลาดจากระบบ</p><p className="font-medium text-sm opacity-90">{error}</p></div>
+              </div>
+            )}
+
+            {/* ส่วนที่ 1: ข้อมูลผู้ยื่น */}
             <FormSection title="1. ข้อมูลผู้ยื่นคำร้อง">
               <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <div className="space-y-2">
@@ -127,6 +151,7 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เลขประจำตัวประชาชน <span className="text-red-500">*</span></label>
                   <input required type="text" maxLength={13} placeholder="X-XXXX-XXXXX-XX-X" className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-mono" value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value.replace(/[^0-9]/g, '')})} />
                 </div>
+                {/* ... (โทรศัพท์/อีเมล คงเดิม) ... */}
                 <div className="space-y-2">
                   <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
                   <div className="relative group">
@@ -144,6 +169,7 @@ const RequestView: React.FC<RequestViewProps> = ({
               </div>
             </FormSection>
 
+            {/* ส่วนที่ 2: รายละเอียดเหตุการณ์ */}
             <FormSection title="2. รายละเอียดเหตุการณ์">
               <div className="grid md:grid-cols-2 gap-x-8 gap-y-6 mb-8">
                 <div className="space-y-2">
@@ -163,7 +189,11 @@ const RequestView: React.FC<RequestViewProps> = ({
               <div className="space-y-3 mb-8">
                 <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1 flex items-center gap-2">ปักหมุดตำแหน่งที่เกิดเหตุบนแผนที่ <span className="text-red-500">*</span></label>
                 <div className="rounded-3xl overflow-hidden border-2 border-slate-200 shadow-md">
-                  <LocationPicker initialLat={formData.latitude} initialLng={formData.longitude} onLocationSelect={handleLocationSelect} />
+                <LocationPicker 
+  initialLat={formData.latitude} 
+  initialLng={formData.longitude} 
+  onLocationSelect={handleLocationSelect} 
+/>
                 </div>
               </div>
 
@@ -212,17 +242,40 @@ const RequestView: React.FC<RequestViewProps> = ({
               </div>
             </FormSection>
 
-            {/* ✅ ส่วนที่ 3: เอกสารประกอบ (อัปเดต label ดอกจันแดง) */}
+            {/* ส่วนที่ 3: เอกสารประกอบ (อัปเดตดอกจันใหม่ตามคำขอ) */}
             <FormSection title="3. เอกสารประกอบ">
               <div className="grid md:grid-cols-2 gap-8">
-                <FileUploader label="รูปถ่ายบัตรประชาชน *" description="เห็นข้อมูลหน้าบัตรชัดเจน" icon={User} files={files.idCard} onFileChange={(f: any) => setFiles((prev) => ({ ...prev, idCard: f }))} />
-                <FileUploader label="ใบแจ้งความ *" description="ใช้เพื่อประกอบการพิจารณา" icon={FileText} files={files.report} onFileChange={(f: any) => setFiles((prev) => ({ ...prev, report: f }))} />
+                {/* 📌 บัตรประชาชน (บังคับ) */}
+                <FileUploader 
+                  label="รูปถ่ายบัตรประชาชน *" 
+                  description="เห็นข้อมูลหน้าบัตรและชื่อชัดเจน" 
+                  icon={User} 
+                  files={files.idCard} 
+                  onFileChange={(f: any) => setFiles((prev) => ({ ...prev, idCard: f }))} 
+                />
+                {/* 📌 ใบแจ้งความ (บังคับ) */}
+                <FileUploader 
+                  label="ใบแจ้งความ *" 
+                  description="ต้องมีตราประทับจากสถานีตำรวจ" 
+                  icon={FileText} 
+                  files={files.report} 
+                  onFileChange={(f: any) => setFiles((prev) => ({ ...prev, report: f }))} 
+                />
               </div>
               <div className="mt-10">
-                <FileUploader label="ภาพเหตุการณ์หรือสภาพแวดล้อม (ถ้ามี)" description="แนบภาพถ่ายจุดเกิดเหตุเพื่อให้เจ้าหน้าที่ระบุตำแหน่งกล้องได้แม่นยำ" icon={Camera} multiple={true} files={files.scene} onFileChange={(f: any) => setFiles((prev) => ({ ...prev, scene: f }))} />
+                {/* 📌 ภาพเหตุการณ์ (ไม่บังคับ) */}
+                <FileUploader 
+                  label="ภาพเหตุการณ์หรือสภาพแวดล้อม (ถ้ามี)" 
+                  description="แนบภาพถ่ายจุดเกิดเหตุเพื่อให้เจ้าหน้าที่หาตำแหน่งกล้องได้แม่นยำ" 
+                  icon={Camera} 
+                  multiple={true} 
+                  files={files.scene} 
+                  onFileChange={(f: any) => setFiles((prev) => ({ ...prev, scene: f }))} 
+                />
               </div>
             </FormSection>
 
+            {/* ส่วนที่ 4: การรับไฟล์ (คงเดิม) */}
             <FormSection title="4. ช่องทางการรับไฟล์ข้อมูล">
               <div className="grid sm:grid-cols-2 gap-6">
                 <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all ${formData.deliveryMethod === 'LINE' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
@@ -234,24 +287,11 @@ const RequestView: React.FC<RequestViewProps> = ({
                   <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg"><Footprints className="w-6 h-6 text-blue-600" /> รับด้วยตนเอง</span>
                 </label>
               </div>
-              <div className="mt-8">
-                {formData.deliveryMethod === 'LINE' ? (
-                  <div className="p-8 bg-emerald-50/40 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/VDA4zO8`} className="w-24 h-24 mix-blend-multiply" />
-                    <div className="text-center md:text-left"><p className="font-bold text-emerald-900 text-lg">ขั้นตอนรับไฟล์ผ่าน LINE</p><p className="text-emerald-800 text-sm opacity-80 font-medium">สแกนเพิ่มเพื่อนและแจ้งเลขที่คำร้องเมื่อเจ้าหน้าที่ตรวจสอบเสร็จสิ้น</p></div>
-                  </div>
-                ) : (
-                  <div className="p-8 bg-blue-50/40 rounded-[2.5rem] border border-blue-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-blue-900 shadow-sm"><Info className="w-8 h-8" /></div>
-                    <div className="text-center md:text-left"><p className="font-bold text-blue-900 text-lg">เงื่อนไขการมารับด้วยตนเอง</p><p className="text-blue-800 text-sm opacity-80 font-medium">กรุณานำอุปกรณ์เก็บข้อมูล (Flash Drive) มาติดต่อที่ศูนย์ CCTV เทศบาลตำบลราไวย์</p></div>
-                  </div>
-                )}
-              </div>
             </FormSection>
 
             <div className="pt-12 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-8">
               <div className="flex items-center gap-3 bg-slate-50 px-6 py-3 rounded-full border border-slate-100 shadow-inner">
-                <ShieldCheck className="w-5 h-5 text-blue-700" /><p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">มาตรฐาน PDPA 100%</p>
+                <ShieldCheck className="w-5 h-5 text-blue-700" /><p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">มาตรฐานความปลอดภัย PDPA 100%</p>
               </div>
               <div className="flex gap-4 w-full sm:w-auto">
                 <button type="button" onClick={() => setView('home')} className="flex-1 sm:flex-none px-10 py-4 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all text-sm">ยกเลิก</button>
