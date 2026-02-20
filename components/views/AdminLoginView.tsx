@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, ShieldCheck, ArrowLeft, Loader2, AlertCircle, KeyRound } from 'lucide-react';
+// ✅ เพิ่ม GoogleAuthProvider และ signInWithPopup
+import { auth } from '../../lib/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { Lock, ShieldCheck, ArrowLeft, Loader2, AlertCircle, Mail, Building2 } from 'lucide-react';
 
 interface AdminLoginViewProps {
   setView: (view: string) => void;
@@ -9,73 +12,105 @@ interface AdminLoginViewProps {
 }
 
 const AdminLoginView: React.FC<AdminLoginViewProps> = ({ setView, onLoginSuccess }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const brandGradient = "linear-gradient(90deg, hsla(222, 51%, 34%, 1) 0%, hsla(119, 37%, 45%, 1) 100%)";
 
-  const handleLogin = (e: React.FormEvent) => {
+  // ✅ ฟังก์ชัน Login ด้วย Google (Gmail)
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
+    const provider = new GoogleAuthProvider();
+    
+    try {
+      await signInWithPopup(auth, provider);
+      console.log("✅ เข้าสู่ระบบด้วย Gmail สำเร็จ");
+      onLoginSuccess();
+    } catch (err: any) {
+      console.error("Google Login Error:", err.code);
+      setError('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่ครับ');
+      setLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
-    // ✅ ตรวจสอบรหัสผ่าน (สามารถแก้คำว่า rawai2024 เป็นรหัสที่ต้องการได้)
-    setTimeout(() => {
-      if (password === 'rawai2024') { 
-        onLoginSuccess();
-      } else {
-        setError('รหัสผ่านไม่ถูกต้อง สำหรับเจ้าหน้าที่เท่านั้น');
-        setLoading(false);
-      }
-    }, 1500);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onLoginSuccess();
+    } catch (err: any) {
+      setError('อีเมลหรือรหัสผ่านไม่ถูกต้องครับ');
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md animate-in zoom-in-95 duration-300">
-        <button 
-          onClick={() => setView('home')}
-          className="mb-8 inline-flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold group"
-        >
+        <button onClick={() => setView('home')} className="mb-8 inline-flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold group">
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> กลับหน้าหลัก
         </button>
 
         <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden">
           <div className="p-10 text-center bg-slate-50/50 border-b border-slate-100">
             <div className="w-20 h-20 rounded-3xl bg-white shadow-md border border-slate-100 flex items-center justify-center mx-auto mb-6 text-blue-900">
-              <KeyRound className="w-10 h-10" />
+              <Building2 className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900">Staff Access</h2>
-            <p className="text-slate-500 text-xs font-bold mt-1 uppercase tracking-widest opacity-70">สำหรับเจ้าหน้าที่เทศบาล</p>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Staff Access</h2>
+            <p className="text-slate-500 text-[10px] font-black mt-1 uppercase tracking-[0.2em] opacity-70">ระบบจัดการดิจิทัลราไวย์</p>
           </div>
 
-          <form onSubmit={handleLogin} className="p-10 space-y-6">
+          <div className="p-10 space-y-6">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-in shake">
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold animate-in shake">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 {error}
               </div>
             )}
-            <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">รหัสผ่านเข้าใช้งาน</label>
-              <input 
-                required type="password" 
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none transition-all font-bold text-center text-xl tracking-widest"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+
+            {/* 🔴 ปุ่ม Login ด้วย Google (ทันสมัยสุดๆ) */}
             <button 
-              type="submit" disabled={loading}
-              className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-              style={{ background: brandGradient }}
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full py-4 bg-white border-2 border-slate-100 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-              {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+              <span className="font-bold text-slate-700">เข้าใช้งานด้วย Gmail</span>
             </button>
-          </form>
+
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-slate-100"></div>
+              <span className="flex-shrink mx-4 text-[10px] font-black text-slate-300 uppercase">หรือใช้รหัสผ่าน</span>
+              <div className="flex-grow border-t border-slate-100"></div>
+            </div>
+
+            {/* ฟอร์ม Email/Password เดิม */}
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">อีเมลเจ้าหน้าที่</label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
+                  <input required type="email" className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all font-bold text-slate-700" placeholder="admin@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">รหัสผ่าน</label>
+                <div className="relative group">
+                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
+                  <input required type="password" className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:bg-white outline-none transition-all font-bold text-slate-700 tracking-widest" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="w-full py-5 rounded-2xl text-white font-black text-lg shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 mt-4" style={{ background: brandGradient }}>
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ShieldCheck className="w-6 h-6" />}
+                {loading ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

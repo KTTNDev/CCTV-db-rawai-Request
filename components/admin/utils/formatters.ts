@@ -94,3 +94,12 @@ export const formatSubmitDate = (timestamp: any) => {
     year: '2-digit' 
   });
 };
+
+export const ACCIDENT_SUBTYPE_TH: Record<string, string> = {
+  'MC_VS_MC': '🏍️ จยย. ชน จยย.',
+  'MC_VS_CAR': '🚗 จยย. ชน รถยนต์',
+  'CAR_VS_CAR': '🚘 รถยนต์ ชน รถยนต์',
+  'PEDESTRIAN': '🚶 ชนคนเดินเท้า',
+  'HIT_AND_RUN': '🏃 ชนแล้วหนี',
+  'OTHER': '📋 อื่นๆ'
+};

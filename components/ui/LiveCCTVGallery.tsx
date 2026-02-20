@@ -14,7 +14,7 @@ const LiveCCTVGallery = () => {
       name: "จุดชมวิวกังหันลมแหลมพรหมเทพ (Live Stream)", 
       location: "แหลมพรหมเทพ", 
       // แปลงลิงก์ youtube.com/live/ID เป็น youtube.com/embed/ID
-      embedUrl: "https://www.youtube.com/embed/OkP1e7h8XQo?autoplay=1&mute=1&rel=0",
+      embedUrl: "https://www.youtube.com/embed/aFUWeOu4Iak?autoplay=1&mute=1&rel=0",
       type: "public" 
     },
     { 

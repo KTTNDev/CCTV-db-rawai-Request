@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getCountFromServer, doc, setDoc, increment, onSnapshot } from 'firebase/firestore';
+// ✅ เปลี่ยนจาก onSnapshot เป็น getDoc เพื่อประหยัดโควตา
+import { collection, query, where, getCountFromServer, doc, setDoc, increment, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import AccidentMap from '../ui/AccidentMap';
 import LiveCCTVGallery from '../ui/LiveCCTVGallery';
@@ -34,74 +35,59 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   useEffect(() => {
     if (!db) return;
 
-    // ✅ 1. ระบบดักนับผู้เข้าชม (Thai Timezone)
-    const trackVisit = async () => {
+    const todayStr = new Date().toLocaleDateString('en-CA');
+
+    // ✅ 1. ระบบดักนับและดึงสถิติผู้เข้าชมแบบ One-time (ประหยัดโควตา)
+    const handleAnalytics = async () => {
       try {
         const hasVisited = sessionStorage.getItem('rawai_v_2026');
-        if (!hasVisited) {
-          const today = new Date().toLocaleDateString('en-CA'); 
-          const dailyRef = doc(db, 'site_analytics', today);
-          const globalRef = doc(db, 'site_analytics', 'global_stats');
+        const dailyRef = doc(db, 'site_analytics', todayStr);
+        const globalRef = doc(db, 'site_analytics', 'global_stats');
 
+        if (!hasVisited) {
           await Promise.all([
-            setDoc(dailyRef, { visits: increment(1), date: today }, { merge: true }),
+            setDoc(dailyRef, { visits: increment(1), date: todayStr }, { merge: true }),
             setDoc(globalRef, { totalVisits: increment(1) }, { merge: true })
           ]);
           sessionStorage.setItem('rawai_v_2026', 'true');
         }
-      } catch (e) { console.error("Tracking Error:", e); }
+
+        // ดึงข้อมูลมาโชว์แค่ครั้งเดียวตอนโหลดหน้า
+        const [todaySnap, globalSnap] = await Promise.all([
+          getDoc(dailyRef),
+          getDoc(globalRef)
+        ]);
+
+        setVisitorStats({
+          today: todaySnap.exists() ? todaySnap.data().visits || 0 : 0,
+          total: globalSnap.exists() ? globalSnap.data().totalVisits || 0 : 0
+        });
+      } catch (e) { console.error("Analytics Error:", e); }
     };
 
-    // ✅ 2. ระบบฟังผลสถิติผู้เข้าชมแบบ Real-time
-    const todayStr = new Date().toLocaleDateString('en-CA');
-    const unsubToday = onSnapshot(doc(db, 'site_analytics', todayStr), (docSnap) => {
-      if (docSnap.exists()) setVisitorStats(prev => ({ ...prev, today: docSnap.data().visits || 0 }));
-    });
-    const unsubTotal = onSnapshot(doc(db, 'site_analytics', 'global_stats'), (docSnap) => {
-      if (docSnap.exists()) setVisitorStats(prev => ({ ...prev, total: docSnap.data().totalVisits || 0 }));
-    });
-
-    // ✅ 3. ระบบดึงสถิติคำร้อง CCTV (แก้ไขปัญหาเลข 0)
-    const fetchStats = async () => {
+    // ✅ 2. ระบบดึงสถิติคำร้อง CCTV (ใช้ getCountFromServer ซึ่งประหยัดมาก)
+    const fetchCCTVStats = async () => {
       try {
-        // ⚠️ ตรวจสอบชื่อคอลเลกชันให้ตรงกับใน Firebase Console
         const coll = collection(db, 'cctv_requests');
         
-        // ดึงยอดรวมทั้งหมด
-        const snapshotTotal = await getCountFromServer(coll);
-        const total = snapshotTotal.data().count;
+        const [totalSnap, completedSnap, pendingSnap] = await Promise.all([
+          getCountFromServer(coll),
+          getCountFromServer(query(coll, where('status', '==', 'completed'))),
+          getCountFromServer(query(coll, where('status', 'in', ['pending', 'processing', 'verifying', 'searching'])))
+        ]);
 
-        // ดึงยอดที่สำเร็จ (เช็คตัวสะกด completed ใน DB ด้วยว่าตรงกันไหม)
-        const qCompleted = query(coll, where('status', '==', 'completed'));
-        const snapshotCompleted = await getCountFromServer(qCompleted);
-        const completed = snapshotCompleted.data().count;
-
-        // ดึงยอดที่รอดำเนินการ
-        const qPending = query(coll, where('status', 'in', ['pending', 'processing', 'verifying', 'searching']));
-        const snapshotPending = await getCountFromServer(qPending);
-        const pending = snapshotPending.data().count;
-
+        const total = totalSnap.data().count;
+        const completed = completedSnap.data().count;
+        const pending = pendingSnap.data().count;
         const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        
-        // อัปเดต State
+
         setStats({ total, successRate: rate, pending });
-
-        // 📝 Log ไว้เช็คใน Browser (F12)
-        console.log("📊 Stats Updated:", { total, completed, pending, rate });
-
-      } catch (e: any) { 
-        console.error("❌ Stats Fetch Error:", e.message);
-        // หากขึ้น Permission Denied ให้ไปแก้ที่ Firestore Rules
-      }
+        console.log("📊 CCTV Stats Loaded");
+      } catch (e) { console.error("CCTV Stats Error:", e); }
     };
 
-    trackVisit();
-    fetchStats();
-    
-    return () => { 
-      unsubToday(); 
-      unsubTotal(); 
-    };
+    handleAnalytics();
+    fetchCCTVStats();
   }, []);
 
   return (
@@ -119,10 +105,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
               {quickLinks.map((link, idx) => (
                 <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
                   <div className={`w-10 h-10 rounded-xl ${link.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}><link.icon className="w-5 h-5" /></div>
-                  <div className="flex-1 text-left">
-                    <p className="text-xs font-black text-slate-700 leading-tight">{link.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">External Link</p>
-                  </div>
+                  <div className="flex-1 text-left"><p className="text-xs font-black text-slate-700 leading-tight">{link.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase">External Link</p></div>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               ))}
@@ -158,35 +141,23 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         </div>
       </section>
 
-      {/* --- Section: แผนที่ & Live Stream --- */}
       <section className="py-24 bg-slate-50/50 border-y border-slate-100">
         <div className="max-w-6xl mx-auto px-6 mb-20"><AccidentMap /></div>
         <LiveCCTVGallery /> 
       </section>
 
-      {/* --- Section: สถิติหลัก (CCTV) --- */}
       <section className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="relative p-12 md:p-20 rounded-[3.5rem] overflow-hidden shadow-2xl" style={{ background: brandGradient }}>
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-16 text-white text-center md:text-left">
-              <div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">เรื่องในระบบ</p>
-                <h3 className="text-6xl font-black">{stats.total.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3>
-              </div>
-              <div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">ความสำเร็จ</p>
-                <h3 className="text-6xl font-black">{stats.successRate}%</h3>
-              </div>
-              <div>
-                <p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">กำลังดำเนินการ</p>
-                <h3 className="text-6xl font-black">{stats.pending.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3>
-              </div>
+              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">เรื่องในระบบ</p><h3 className="text-6xl font-black">{stats.total.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3></div>
+              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">ความสำเร็จ</p><h3 className="text-6xl font-black">{stats.successRate}%</h3></div>
+              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">กำลังดำเนินการ</p><h3 className="text-6xl font-black">{stats.pending.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3></div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- Section: ท้ายหน้า --- */}
       <section className="py-20 bg-slate-50/50">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="flex flex-col md:flex-row items-center gap-10 p-12 bg-white rounded-[3rem] border border-slate-100 shadow-lg text-left mb-16">

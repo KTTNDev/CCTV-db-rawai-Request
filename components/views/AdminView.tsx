@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-// ✅ เพิ่ม doc สำหรับดึงข้อมูลราย document
-import { collection, onSnapshot, doc } from 'firebase/firestore'; 
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// ✅ เพิ่ม getDocs, query, orderBy สำหรับดึงข้อมูลย้อนหลัง
+import { collection, onSnapshot, doc, getDocs, query, where, orderBy } from 'firebase/firestore'; 
 import { db } from '../../lib/firebase';
 import { LayoutDashboard, LogOut, BarChart3, Loader2 } from 'lucide-react';
-
 
 // ✅ Import Components ย่อย
 import { StatsCards } from '../admin/StatsCards';
@@ -17,7 +16,7 @@ import { ReportModal } from '../admin/ReportModal';
 import { Pagination } from '../admin/Pagination';
 
 // ✅ Import Helpers และตัวแปลภาษา
-import { STATUS_TH, EVENT_TYPE_TH, COLORS } from '../admin/utils/formatters';
+import { STATUS_TH, EVENT_TYPE_TH } from '../admin/utils/formatters';
 import { Clock, ShieldCheck, Search as SearchIcon, CheckCircle, XCircle } from 'lucide-react';
 
 interface AdminViewProps {
@@ -32,8 +31,9 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   
-  // ✅ 1.1 เพิ่ม State สำหรับเก็บสถิติผู้เข้าชม
   const [visitorStats, setVisitorStats] = useState({ today: 0, total: 0 });
+  // ✅ 1.2 เพิ่ม State สำหรับเก็บข้อมูลกราฟย้อนหลัง (YouTube Style)
+  const [visitorHistory, setVisitorHistory] = useState<any[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -50,7 +50,6 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   useEffect(() => {
     if (!db) return;
 
-    // --- ดึงข้อมูลคำร้อง CCTV ---
     const q = collection(db, 'cctv_requests');
     const unsubRequests = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -61,17 +60,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
       setLoading(false);
     });
 
-    // --- ✅ ดึงข้อมูลสถิติผู้เข้าชม (Real-time) ---
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('en-CA'); // ใช้รูปแบบเดียวกับ HomeView
     
-    // ฟังยอดวันนี้
     const unsubToday = onSnapshot(doc(db, 'site_analytics', todayStr), (docSnap) => {
       if (docSnap.exists()) {
         setVisitorStats(prev => ({ ...prev, today: docSnap.data().visits || 0 }));
       }
     });
 
-    // ฟังยอดรวมทั้งหมด
     const unsubTotal = onSnapshot(doc(db, 'site_analytics', 'global_stats'), (docSnap) => {
       if (docSnap.exists()) {
         setVisitorStats(prev => ({ ...prev, total: docSnap.data().totalVisits || 0 }));
@@ -79,14 +75,41 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
     });
 
     return () => {
-      unsubRequests();
-      unsubToday();
-      unsubTotal();
+      unsubRequests(); unsubToday(); unsubTotal();
     };
   }, []);
 
   // ---------------------------------------------------------
-  // 3. Data Processing (Filtering, Stats & Pagination)
+  // ✅ 3. ฟังก์ชันดึงข้อมูล Analytics ย้อนหลัง (YouTube Studio Engine)
+  // ---------------------------------------------------------
+  const fetchAnalyticsHistory = useCallback(async () => {
+    if (!db) return;
+    try {
+      // ดึงข้อมูลยอดวิวรายวัน
+      const analyticsRef = collection(db, 'site_analytics');
+      const q = query(analyticsRef, orderBy('date', 'desc'), where('date', '!=', 'global_stats'));
+      const snap = await getDocs(q);
+      
+      const history = snap.docs.map(doc => ({
+        date: doc.id.split('-').slice(1).reverse().join('/'), // แปลง 2026-02-21 เป็น 21/02
+        views: doc.data().visits || 0,
+        requests: requests.filter(r => {
+           if (!r.createdAt) return false;
+           return new Date(r.createdAt.seconds * 1000).toLocaleDateString('en-CA') === doc.id;
+        }).length
+      })).reverse(); // เรียงจากเก่าไปใหม่สำหรับกราฟ
+
+      setVisitorHistory(history);
+    } catch (e) { console.error("History Fetch Error:", e); }
+  }, [requests]);
+
+  // ดึงข้อมูลใหม่เมื่อเปิด Report
+  useEffect(() => {
+    if (showReport) fetchAnalyticsHistory();
+  }, [showReport, fetchAnalyticsHistory]);
+
+  // ---------------------------------------------------------
+  // 4. Data Processing
   // ---------------------------------------------------------
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
@@ -131,44 +154,32 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   const paginatedRequests = filteredRequests.slice(startIndex, startIndex + itemsPerPage);
 
   // ---------------------------------------------------------
-  // 4. UI Helpers
+  // 5. UI Helpers & Templates
   // ---------------------------------------------------------
   const getStatusConfig = (status: string) => {
     const configs: any = {
-      pending: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Clock, label: 'รอตรวจสอบ', cardClass: 'bg-orange-50/50 border-orange-200', rowClass: 'bg-orange-50/60 hover:bg-orange-100/60' },
-      verifying: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: ShieldCheck, label: 'ตรวจเอกสาร', cardClass: 'bg-[#eff6ff]/40 border-blue-100', rowClass: 'bg-[#eff6ff]/40 hover:bg-[#eff6ff]/80' },
-      searching: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: SearchIcon, label: 'กำลังหาภาพ', cardClass: 'bg-indigo-50/40 border-indigo-100', rowClass: 'bg-indigo-50/40 hover:bg-indigo-50/80' },
-      completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle, label: 'เสร็จสิ้น', cardClass: 'bg-white border-slate-100', rowClass: 'bg-white hover:bg-slate-50' },
-      rejected: { color: 'bg-red-50 text-red-700 border-red-200', icon: XCircle, label: 'ปฏิเสธ', cardClass: 'bg-slate-50 border-slate-100 opacity-80', rowClass: 'bg-[#f8fafc] hover:bg-slate-100' },
+      pending: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Clock, label: 'รอตรวจสอบ' },
+      verifying: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: ShieldCheck, label: 'ตรวจเอกสาร' },
+      searching: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: SearchIcon, label: 'กำลังหาภาพ' },
+      completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle, label: 'เสร็จสิ้น' },
+      rejected: { color: 'bg-red-50 text-red-700 border-red-200', icon: XCircle, label: 'ปฏิเสธ' },
     };
     return configs[status] || configs.pending;
   };
 
   const messageTemplates = [
-    { label: '🟢 พบภาพ (Line OA)', text: "เจ้าหน้าที่ได้ตรวจสอบกล้องวงจรปิดเรียบร้อยแล้ว 'พบภาพเหตุการณ์' ตามที่ท่านแจ้ง กรุณาติดต่อขอรับลิงก์ดาวน์โหลดไฟล์ภาพผ่านทาง Line OA :@745jasmc หรือ QR-Code ที่ปรากฏ โดยแจ้งเลขที่คำร้อง [ID] ให้เจ้าหน้าที่ทราบครับ/ค่ะ" },
-    { label: '🟢 พบภาพ (รับเอง)', text: "ตรวจสอบพบภาพเหตุการณ์เรียบร้อยแล้วครับ/ค่ะ ท่านสามารถนำอุปกรณ์จัดเก็บข้อมูลมาติดต่อรับไฟล์ภาพได้ที่ ศูนย์ CCTV เทศบาลตำบลราไวย์ ในวันและเวลาทำการ โปรดเตรียมบัตรประชาชนตัวจริงมาแสดงด้วยครับ/ค่ะ" },
-    { label: '🟡 ขอพิกัดเพิ่ม', text: "เจ้าหน้าที่ได้รับคำร้องของท่านแล้ว แต่เพื่อความแม่นยำในการระบุตำแหน่งกล้อง รบกวนท่านส่ง 'ภาพถ่ายสถานที่เกิดเหตุจริง' หรือจุดสังเกตเพิ่มเติมเข้ามาทาง Line OA พร้อมแจ้งเลขที่คำร้องด้วยครับ/ค่ะ" },
-    { label: '🟡 ขอเวลาเพิ่ม', text: "เนื่องจากช่วงเวลาที่ท่านแจ้งค่อนข้างกว้าง รบกวนท่านระบุ 'ช่วงเวลาที่เกิดเหตุให้แคบลง' (บวกลบไม่เกิน 30 นาที) เพื่อความรวดเร็วในการค้นหาครับ/ค่ะ" },
-    { label: '🔴 ไม่พบภาพ', text: "เจ้าหน้าที่ตรวจสอบแล้วไม่พบภาพเหตุการณ์เนื่องจากอยู่นอกรัศมี หรือข้อมูลถูกบันทึกทับไปแล้ว ต้องขออภัยมา ณ ที่นี้ด้วยครับ/ค่ะ" },
-    { label: '❌ ปฏิเสธ (ขาดใบแจ้งความ)', text: "ไม่สามารถดำเนินการให้ได้เนื่องจากขาด 'ใบแจ้งความจากสถานีตำรวจ' รบกวนท่านแนบเอกสารเพิ่มและยื่นคำร้องใหม่อีกครั้งครับ/ค่ะ" },
+    { label: '🟢 พบภาพ (Line OA)', text: "พบภาพเหตุการณ์เรียบร้อยแล้ว กรุณาติดต่อผ่าน Line OA : @745jasmc พร้อมแจ้งเลขที่คำร้อง [ID] ครับ" },
+    { label: '🔴 ไม่พบภาพ', text: "เจ้าหน้าที่ตรวจสอบแล้วไม่พบภาพเหตุการณ์เนื่องจากอยู่นอกรัศมีกล้อง ต้องขออภัยด้วยครับ" },
   ];
+
+  const handleRefresh = () => { console.log("Stats Refreshing..."); fetchAnalyticsHistory(); };
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-slate-50">
       <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
     </div>
   );
-// ภายใน AdminView.tsx (ประมาณบรรทัดที่ 180+)
 
-// ✅ 1. สร้างฟังก์ชันหลอกๆ ไว้ก่อนเพื่อให้ตัว Build ยอมรับ
-const handleRefresh = () => {
-  console.log("Stats Refreshing...");
-  // จริงๆ ระบบ onSnapshot มัน Real-time อยู่แล้วครับ 
-  // แต่เราส่งฟังก์ชันไปเพื่อให้ไอคอนมันหมุนสวยๆ ตามที่เราออกแบบไว้
-};
-  // ---------------------------------------------------------
-  // 5. Main Render
-  // ---------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-12 selection:bg-blue-100">
       <div className="max-w-[1600px] mx-auto p-4 md:p-8">
@@ -188,12 +199,9 @@ const handleRefresh = () => {
           </div>
         </div>
 
-        {/* 📊 1. Stats Cards (✅ ส่ง visitorStats เข้าไปด้วย) */}
-<StatsCards 
-  requests={requests} 
-  visitorStats={visitorStats} 
-  onRefresh={handleRefresh} // 👈 เพิ่มบรรทัดนี้เข้าไปครับ
-/>
+        {/* 📊 1. Stats Cards */}
+        <StatsCards requests={requests} visitorStats={visitorStats} onRefresh={handleRefresh} />
+
         {/* 🔍 2. Filters */}
         <FilterBar 
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}
@@ -224,11 +232,13 @@ const handleRefresh = () => {
           getStatusConfig={getStatusConfig} messageTemplates={messageTemplates}
         />
 
-        {/* 📈 7. Report Modal */}
+        {/* 📈 7. Report Modal (✅ ส่ง visitorHistory เข้าไปเพื่อแสดงกราฟ) */}
         <ReportModal 
           isOpen={showReport} onClose={() => setShowReport(false)} 
           filteredRequests={filteredRequests} reportData={reportData} 
           startDate={startDate} endDate={endDate} 
+          visitorHistory={visitorHistory} 
+          visitorStats={visitorStats}
         />
 
       </div>
