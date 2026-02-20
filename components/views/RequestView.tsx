@@ -277,15 +277,42 @@ const RequestView: React.FC<RequestViewProps> = ({
 
             {/* ส่วนที่ 4: การรับไฟล์ (คงเดิม) */}
             <FormSection title="4. ช่องทางการรับไฟล์ข้อมูล">
+              <p className="text-sm font-medium text-slate-500 mb-6 ml-1">เลือกวิธีการที่ท่านสะดวกรับข้อมูล <span className="text-red-500">*</span></p>
               <div className="grid sm:grid-cols-2 gap-6">
-                <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all ${formData.deliveryMethod === 'LINE' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
-                  <input type="radio" name="deliveryMethod" value="LINE" checked={formData.deliveryMethod === 'LINE'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600" />
+                <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all shadow-sm hover:shadow-md ${formData.deliveryMethod === 'LINE' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
+                  <input type="radio" name="deliveryMethod" value="LINE" checked={formData.deliveryMethod === 'LINE'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
                   <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg"><QrCode className="w-6 h-6 text-emerald-600" /> LINE OA (แนะนำ)</span>
                 </label>
-                <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all ${formData.deliveryMethod === 'WALKIN' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
-                  <input type="radio" name="deliveryMethod" value="WALKIN" checked={formData.deliveryMethod === 'WALKIN'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600" />
+                <label className={`group flex items-center p-6 rounded-[2rem] border-2 cursor-pointer transition-all shadow-sm hover:shadow-md ${formData.deliveryMethod === 'WALKIN' ? 'border-blue-600 bg-blue-50/30 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-300'}`}>
+                  <input type="radio" name="deliveryMethod" value="WALKIN" checked={formData.deliveryMethod === 'WALKIN'} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})} className="h-5 w-5 text-blue-600 focus:ring-blue-600 border-slate-300" />
                   <span className="ml-4 font-bold text-slate-800 flex items-center gap-3 text-lg"><Footprints className="w-6 h-6 text-blue-600" /> รับด้วยตนเอง</span>
                 </label>
+              </div>
+
+              <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                  {formData.deliveryMethod === 'LINE' ? (
+                  <div className="p-8 bg-emerald-50/40 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                      <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center border border-emerald-100 shadow-sm flex-shrink-0">
+                          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://lin.ee/VDA4zO8`} alt="Line OA QR" className="w-24 h-24 object-contain mix-blend-multiply" />
+                      </div>
+                      <div className="text-center md:text-left space-y-2">
+                          <p className="font-bold text-emerald-900 text-lg">ขั้นตอนรับไฟล์ผ่าน LINE</p>
+                          <ul className="text-emerald-900 font-medium space-y-2 text-sm opacity-90">
+                              <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> 1. สแกน QR Code เพื่อเพิ่มเพื่อนระบบอัตโนมัติ</li>
+                              <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> 2. ส่งข้อความแจ้ง <span className="text-blue-800 underline underline-offset-4 font-bold bg-white/50 px-2 rounded">"เลขที่คำร้อง"</span> ของท่าน</li>
+                              <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" /> 3. ระบบส่งลิงก์ดาวน์โหลดให้ท่านตรวจสอบ</li>
+                          </ul>
+                      </div>
+                  </div>
+                  ) : (
+                  <div className="p-8 bg-blue-50/40 rounded-[2.5rem] border border-blue-100 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                      <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-blue-900 shadow-sm border border-blue-50 flex-shrink-0"><Info className="w-10 h-10" /></div>
+                      <div className="space-y-2 text-center md:text-left">
+                          <p className="font-bold text-blue-900 text-lg">เงื่อนไขการมารับด้วยตนเอง</p>
+                          <p className="text-slate-700 font-normal leading-relaxed text-sm">กรุณานำอุปกรณ์เก็บข้อมูล <span className="text-blue-900 font-bold decoration-blue-800 underline underline-offset-2">(Flash Drive / External HDD)</span> มาติดต่อที่ศูนย์ CCTV ณ สำนักงานเทศบาลตำบลราไวย์ ในวันและเวลาทำการ <br className="hidden md:block" /> <span className="bg-white px-4 py-1.5 rounded-lg border border-blue-100 shadow-sm mt-3 inline-block font-bold text-blue-900 text-sm tracking-tight">จันทร์-ศุกร์ | 08:30 - 16:30 น.</span></p>
+                      </div>
+                  </div>
+                  )}
               </div>
             </FormSection>
 
