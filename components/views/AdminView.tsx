@@ -158,7 +158,14 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
       <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
     </div>
   );
+// ภายใน AdminView.tsx (ประมาณบรรทัดที่ 180+)
 
+// ✅ 1. สร้างฟังก์ชันหลอกๆ ไว้ก่อนเพื่อให้ตัว Build ยอมรับ
+const handleRefresh = () => {
+  console.log("Stats Refreshing...");
+  // จริงๆ ระบบ onSnapshot มัน Real-time อยู่แล้วครับ 
+  // แต่เราส่งฟังก์ชันไปเพื่อให้ไอคอนมันหมุนสวยๆ ตามที่เราออกแบบไว้
+};
   // ---------------------------------------------------------
   // 5. Main Render
   // ---------------------------------------------------------
@@ -182,8 +189,11 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
         </div>
 
         {/* 📊 1. Stats Cards (✅ ส่ง visitorStats เข้าไปด้วย) */}
-        <StatsCards requests={requests} visitorStats={visitorStats} />
-
+<StatsCards 
+  requests={requests} 
+  visitorStats={visitorStats} 
+  onRefresh={handleRefresh} // 👈 เพิ่มบรรทัดนี้เข้าไปครับ
+/>
         {/* 🔍 2. Filters */}
         <FilterBar 
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}

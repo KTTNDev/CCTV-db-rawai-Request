@@ -1,26 +1,12 @@
 'use client';
+import React, { useRef, useEffect } from 'react'
 
-import React from 'react';
 import { 
-  ArrowLeft, 
-  Search, 
-  AlertCircle, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  User, 
-  QrCode, 
-  Footprints, 
-  Camera, 
-  FileText,
-  History,
-  CalendarDays,
-  ShieldCheck,
-  Activity,
-  CheckCircle2,
-  ExternalLink
+  ArrowLeft, Search, AlertCircle, Clock, CheckCircle, XCircle, 
+  User, QrCode, Footprints, Camera, FileText, History, 
+  CalendarDays, ShieldCheck, Activity, CheckCircle2, 
+  ExternalLink, Phone, MapPin, Info, Clock3, Download, AlertTriangle
 } from 'lucide-react';
-
 interface TrackViewProps {
   trackingIdInput: string;
   setTrackingIdInput: (val: string) => void;
@@ -41,9 +27,21 @@ const TrackView: React.FC<TrackViewProps> = ({
   setView 
 }) => {
   
+
+  
   // ✅ ธีมสี Gradient ใหม่ (เขียวมิ้นต์ -> น้ำเงินเข้ม)
   const brandGradient = "linear-gradient(90deg, hsla(160, 50%, 51%, 1) 0%, hsla(247, 60%, 21%, 1) 100%)";
+  const resultSectionRef = useRef<HTMLDivElement>(null); //
 
+  useEffect(() => {
+    if (trackResult && resultSectionRef.current) {
+      resultSectionRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  }, [trackResult]);
+  
   // ฟังก์ชันแสดงสถานะปัจจุบันแบบ Hero Card (Highlight)
   const renderCurrentStatusHero = (status: string) => {
     const config: any = {
@@ -117,6 +115,7 @@ const TrackView: React.FC<TrackViewProps> = ({
   };
 
   return (
+    
     <div className="max-w-4xl mx-auto animate-in slide-in-from-right duration-500 pt-12 pb-24 px-6 font-sans text-slate-900">
       {/* ปุ่มย้อนกลับ */}
       <button 
@@ -166,11 +165,24 @@ const TrackView: React.FC<TrackViewProps> = ({
 
       {/* --- ส่วนแสดงผลลัพธ์ (Result Card) --- */}
       {trackResult && (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          
+ <div ref={resultSectionRef} className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 scroll-mt-10">
           {/* ✅ 1. ส่วนแสดงสถานะปัจจุบันที่เด่นชัด (Hero Status) */}
           {renderCurrentStatusHero(trackResult.status)}
-
+{/* ✅ 1. กล้องสรุปการดำเนินการจากเจ้าหน้าที่ (Official Response) */}
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden">
+             <div className="relative z-10">
+                <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-4">Official Response</p>
+                <div className="flex items-start gap-4">
+                  <Info className="w-6 h-6 text-blue-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="text-xl font-bold mb-3 italic">" {trackResult.adminNote || 'กำลังอยู่ระหว่างดำเนินการตรวจสอบข้อมูลจากกล้องวงจรปิด'} "</h4>
+                    <p className="text-slate-400 text-sm font-medium">อัปเดตล่าสุดเมื่อ: {trackResult.statusHistory?.[trackResult.statusHistory.length-1]?.timestamp?.seconds ? new Date(trackResult.statusHistory[trackResult.statusHistory.length-1].timestamp.seconds * 1000).toLocaleString('th-TH') : 'N/A'}</p>
+                  </div>
+                </div>
+              
+             </div>
+             <Activity className="absolute -right-6 -bottom-6 w-40 h-40 text-white/5" />
+          </div>
           <div className="bg-white rounded-[3rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden transition-all">
             {/* Header ของ Card */}
             <div className="p-8 md:p-12 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-50/30">
@@ -249,7 +261,13 @@ const TrackView: React.FC<TrackViewProps> = ({
                         {trackResult.location}
                       </span>
                   </div>
-                  
+                  {/* ✅ ส่วนที่เพิ่ม: รายละเอียดเหตุการณ์ (Description) */}
+               <div className="space-y-4 pt-6 border-t border-slate-100">
+                  <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><FileText className="w-3 h-3" /> รายละเอียดที่แจ้งไว้</h5>
+                  <div className="bg-slate-50 p-6 rounded-xl  border border-slate-100">
+                    <p className="text-slate-700 leading-relaxed text-sm italic">"{trackResult.description || 'ไม่ได้ระบุรายละเอียดเพิ่มเติม'}"</p>
+                  </div>
+               </div>
                   {/* ✅ แสดงไฟล์แนบแบบปุ่มคลิกดูภาพ */}
                   {trackResult.attachments && (
                       <div className="flex flex-wrap gap-2 mt-2">

@@ -1,7 +1,11 @@
 // components/ui/LiveCCTVGallery.tsx
 import React, { useState } from 'react';
-import { Video, Eye, MapPin, Play, MonitorPlay, Zap, Activity, AlertTriangle, ExternalLink } from 'lucide-react';
-
+import { 
+  Video, Eye, MapPin, Play, MonitorPlay, Zap, 
+  Activity, // ✅ เพิ่มตัวนี้เข้าไปครับ
+  AlertTriangle, 
+  ExternalLink 
+} from 'lucide-react';
 const LiveCCTVGallery = () => {
   // ✅ เปลี่ยนจาก Local IP เป็น YouTube Embed Link
   const [cameras] = useState([
