@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+// ✅ เพิ่ม doc สำหรับดึงข้อมูลราย document
+import { collection, onSnapshot, doc } from 'firebase/firestore'; 
 import { db } from '../../lib/firebase';
 import { LayoutDashboard, LogOut, BarChart3, Loader2 } from 'lucide-react';
 
-// ✅ 1. Import Components ย่อยที่แยกไว้
+
+// ✅ Import Components ย่อย
 import { StatsCards } from '../admin/StatsCards';
 import { FilterBar } from '../admin/FilterBar';
 import { RequestTable } from '../admin/RequestTable';
@@ -14,7 +16,7 @@ import { DetailModal } from '../admin/DetailModal';
 import { ReportModal } from '../admin/ReportModal';
 import { Pagination } from '../admin/Pagination';
 
-// ✅ 2. Import Helpers และตัวแปลภาษา
+// ✅ Import Helpers และตัวแปลภาษา
 import { STATUS_TH, EVENT_TYPE_TH, COLORS } from '../admin/utils/formatters';
 import { Clock, ShieldCheck, Search as SearchIcon, CheckCircle, XCircle } from 'lucide-react';
 
@@ -24,11 +26,15 @@ interface AdminViewProps {
 
 const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   // ---------------------------------------------------------
-  // 3. States Management
+  // 1. States Management
   // ---------------------------------------------------------
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  
+  // ✅ 1.1 เพิ่ม State สำหรับเก็บสถิติผู้เข้าชม
+  const [visitorStats, setVisitorStats] = useState({ today: 0, total: 0 });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterEventType, setFilterEventType] = useState('all');
@@ -39,27 +45,49 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   const [showReport, setShowReport] = useState(false);
 
   // ---------------------------------------------------------
-  // 4. Firebase Real-time Listener
+  // 2. Real-time Listeners (คำร้อง CCTV & สถิติผู้เข้าชม)
   // ---------------------------------------------------------
   useEffect(() => {
     if (!db) return;
+
+    // --- ดึงข้อมูลคำร้อง CCTV ---
     const q = collection(db, 'cctv_requests');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubRequests = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRequests(data.sort((a: any, b: any) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
       setLoading(false);
     }, (error) => {
-      console.error("Firestore Error:", error);
+      console.error("Firestore Error (Requests):", error);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // --- ✅ ดึงข้อมูลสถิติผู้เข้าชม (Real-time) ---
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // ฟังยอดวันนี้
+    const unsubToday = onSnapshot(doc(db, 'site_analytics', todayStr), (docSnap) => {
+      if (docSnap.exists()) {
+        setVisitorStats(prev => ({ ...prev, today: docSnap.data().visits || 0 }));
+      }
+    });
+
+    // ฟังยอดรวมทั้งหมด
+    const unsubTotal = onSnapshot(doc(db, 'site_analytics', 'global_stats'), (docSnap) => {
+      if (docSnap.exists()) {
+        setVisitorStats(prev => ({ ...prev, total: docSnap.data().totalVisits || 0 }));
+      }
+    });
+
+    return () => {
+      unsubRequests();
+      unsubToday();
+      unsubTotal();
+    };
   }, []);
 
   // ---------------------------------------------------------
-  // 5. Data Processing (Filtering, Stats & Pagination)
+  // 3. Data Processing (Filtering, Stats & Pagination)
   // ---------------------------------------------------------
-  
-  // ✅ 5.1 บล็อกกรองข้อมูลตามเงื่อนไขที่เลือก
   const filteredRequests = useMemo(() => {
     return requests.filter(req => {
       const matchesStatus = filterStatus === 'all' || req.status === filterStatus;
@@ -82,37 +110,32 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
     });
   }, [requests, filterStatus, searchQuery, filterEventType, startDate, endDate]);
 
-  // ✅ 5.2 คำนวณสถิติสำหรับรายงาน (แปลเป็นภาษาไทยให้เรียบร้อย)
   const reportData = useMemo(() => {
     const eventCounts: any = {};
     const statusCounts: any = {};
-    
     filteredRequests.forEach(req => {
         const eventLabel = EVENT_TYPE_TH[req.eventType || 'OTHER'] || '📋 อื่นๆ';
         const statusLabel = STATUS_TH[req.status] || req.status;
-        
         eventCounts[eventLabel] = (eventCounts[eventLabel] || 0) + 1;
         statusCounts[statusLabel] = (statusCounts[statusLabel] || 0) + 1;
     });
-
     return {
         chartData: Object.keys(eventCounts).map(name => ({ name, value: eventCounts[name] })),
         pieData: Object.keys(statusCounts).map(name => ({ name, value: statusCounts[name] }))
     };
   }, [filteredRequests]);
 
-  // ✅ 5.3 คำนวณตัวแปรสำหรับ Pagination
   const totalItems = filteredRequests.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedRequests = filteredRequests.slice(startIndex, startIndex + itemsPerPage);
 
   // ---------------------------------------------------------
-  // 6. UI Helpers
+  // 4. UI Helpers
   // ---------------------------------------------------------
   const getStatusConfig = (status: string) => {
     const configs: any = {
-      pending: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Clock, label: 'รอตรวจสอบ', cardClass: 'bg-orange-50/50 border-orange-200 shadow-orange-100/50', rowClass: 'bg-orange-50/60 hover:bg-orange-100/60' },
+      pending: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Clock, label: 'รอตรวจสอบ', cardClass: 'bg-orange-50/50 border-orange-200', rowClass: 'bg-orange-50/60 hover:bg-orange-100/60' },
       verifying: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: ShieldCheck, label: 'ตรวจเอกสาร', cardClass: 'bg-[#eff6ff]/40 border-blue-100', rowClass: 'bg-[#eff6ff]/40 hover:bg-[#eff6ff]/80' },
       searching: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: SearchIcon, label: 'กำลังหาภาพ', cardClass: 'bg-indigo-50/40 border-indigo-100', rowClass: 'bg-indigo-50/40 hover:bg-indigo-50/80' },
       completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle, label: 'เสร็จสิ้น', cardClass: 'bg-white border-slate-100', rowClass: 'bg-white hover:bg-slate-50' },
@@ -137,7 +160,7 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
   );
 
   // ---------------------------------------------------------
-  // 7. Main Render
+  // 5. Main Render
   // ---------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-900 pb-12 selection:bg-blue-100">
@@ -158,10 +181,10 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
           </div>
         </div>
 
-        {/* 📊 1. Stats Cards Section */}
-        <StatsCards requests={requests} />
+        {/* 📊 1. Stats Cards (✅ ส่ง visitorStats เข้าไปด้วย) */}
+        <StatsCards requests={requests} visitorStats={visitorStats} />
 
-        {/* 🔍 2. Filters Section */}
+        {/* 🔍 2. Filters */}
         <FilterBar 
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}
           filterStatus={filterStatus} setFilterStatus={setFilterStatus}
@@ -172,48 +195,30 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
           clearFilters={() => { setSearchQuery(''); setFilterStatus('all'); setFilterEventType('all'); setStartDate(''); setEndDate(''); }}
         />
 
-        {/* 📱 3. Mobile Cards View */}
-        <MobileCardList 
-          requests={paginatedRequests} 
-          onSelect={(req) => setSelectedRequest(req)} 
-          getStatusConfig={getStatusConfig} 
-        />
+        {/* 📱 3. Mobile View */}
+        <MobileCardList requests={paginatedRequests} onSelect={(req) => setSelectedRequest(req)} getStatusConfig={getStatusConfig} />
 
-        {/* 💻 4. Desktop Table View */}
-        <RequestTable 
-          requests={paginatedRequests} 
-          onSelect={(req) => setSelectedRequest(req)} 
-          getStatusConfig={getStatusConfig} 
-        />
+        {/* 💻 4. Desktop View */}
+        <RequestTable requests={paginatedRequests} onSelect={(req) => setSelectedRequest(req)} getStatusConfig={getStatusConfig} />
 
-        {/* 📑 5. Pagination Component */}
+        {/* 📑 5. Pagination */}
         <Pagination 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          startIndex={startIndex}
-          itemsPerPage={itemsPerPage}
-          setCurrentPage={setCurrentPage}
-          setItemsPerPage={setItemsPerPage}
+          currentPage={currentPage} totalPages={totalPages} totalItems={totalItems}
+          startIndex={startIndex} itemsPerPage={itemsPerPage}
+          setCurrentPage={setCurrentPage} setItemsPerPage={setItemsPerPage}
         />
 
         {/* 🛠 6. Detail Modal */}
         <DetailModal 
-          isOpen={!!selectedRequest} 
-          data={selectedRequest} 
-          onClose={() => setSelectedRequest(null)} 
-          getStatusConfig={getStatusConfig}
-          messageTemplates={messageTemplates}
+          isOpen={!!selectedRequest} data={selectedRequest} onClose={() => setSelectedRequest(null)} 
+          getStatusConfig={getStatusConfig} messageTemplates={messageTemplates}
         />
 
         {/* 📈 7. Report Modal */}
         <ReportModal 
-          isOpen={showReport} 
-          onClose={() => setShowReport(false)} 
-          filteredRequests={filteredRequests} 
-          reportData={reportData} 
-          startDate={startDate} 
-          endDate={endDate} 
+          isOpen={showReport} onClose={() => setShowReport(false)} 
+          filteredRequests={filteredRequests} reportData={reportData} 
+          startDate={startDate} endDate={endDate} 
         />
 
       </div>
