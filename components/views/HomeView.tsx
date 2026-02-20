@@ -2,10 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getCountFromServer } from 'firebase/firestore';
-/**
- * 🛠️ การแก้ไขปัญหา "Could not resolve":
- * ใช้ Relative Path เพื่อให้ตัว Build ของคุณหาไฟล์เจอแน่นอน
- */
 import { db } from '../../lib/firebase';
 import AccidentMap from '../ui/AccidentMap';
 
@@ -19,10 +15,17 @@ import {
   Activity, 
   ShieldCheck, 
   Zap, 
-  Clock, 
   ArrowRight,
   Lock,
-  Settings
+  Settings,
+  // ✅ ไอคอนสำหรับเมนูใหม่
+  LayoutGrid,
+  X,
+  Calendar,
+  MapPinned,
+  Megaphone,
+  Building2,
+  ExternalLink
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -32,7 +35,16 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   const [stats, setStats] = useState({ total: 0, successRate: 0, pending: 0 });
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // ✅ State สำหรับเปิด/ปิดเมนู
   const brandGradient = "linear-gradient(90deg, hsla(160, 50%, 51%, 1) 0%, hsla(247, 60%, 21%, 1) 100%)";
+
+  // ข้อมูลลิงก์ภายนอก
+  const quickLinks = [
+    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", icon: Calendar, color: "bg-orange-500" },
+    { name: "Rawai One Map", url: "https://rawai-one-map.web.app/", icon: MapPinned, color: "bg-blue-500" },
+    { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe", icon: Megaphone, color: "bg-pink-500" },
+    { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", icon: Building2, color: "bg-indigo-500" },
+  ];
 
   useEffect(() => {
     if (!db) return;
@@ -54,7 +66,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         setStats({ total, successRate: rate, pending });
       } catch (e) {
         console.error("Error fetching stats:", e);
-        // ข้อมูลจำลอง
         setStats({ total: 1248, successRate: 92, pending: 15 });
       }
     };
@@ -64,7 +75,57 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-50/50 font-sans text-slate-900 selection:bg-teal-100">
       
-      {/* --- ส่วน Hero Section --- */}
+      {/* ----------------------------------------------------
+          ✅ ส่วน FLOATING QUICK ACCESS MENU
+      ---------------------------------------------------- */}
+      <div className="fixed bottom-8 right-8 z-[100] flex flex-col items-end gap-4">
+        {/* แผ่นเมนู (จะแสดงเมื่อ isMenuOpen เป็น true) */}
+        {isMenuOpen && (
+          <div className="mb-2 w-64 bg-white/80 backdrop-blur-2xl rounded-[2.5rem] border border-white shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-300">
+            <div className="p-6 bg-slate-900/5 border-b border-slate-100">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rawai Services</p>
+              <h4 className="text-sm font-bold text-slate-800">ทางเข้าบริการอื่นๆ</h4>
+            </div>
+            <div className="p-3 space-y-1">
+              {quickLinks.map((link, idx) => (
+                <a 
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all group"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${link.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                    <link.icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-xs font-black text-slate-700 leading-tight">{link.name}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">เปิดลิงก์ภายนอก</p>
+                  </div>
+                  <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ปุ่มลอยตัวหลัก */}
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-90 hover:scale-110 ${isMenuOpen ? 'bg-slate-900 text-white' : 'text-white'}`}
+          style={{ background: isMenuOpen ? '' : brandGradient }}
+        >
+          {isMenuOpen ? <X className="w-8 h-8" /> : <LayoutGrid className="w-8 h-8" />}
+          
+          {/* แจ้งเตือนจุดแดงเล็กๆ เพื่อดึงดูดสายตา */}
+          {!isMenuOpen && (
+            <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-white rounded-full animate-ping"></span>
+          )}
+        </button>
+      </div>
+
+
+      {/* --- Hero Section (โค้ดเดิมของคุณฟลุ๊ค) --- */}
       <section className="relative pt-20 pb-32 overflow-hidden bg-white">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
           <div 
@@ -167,7 +228,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         </div>
       </section>
 
-      {/* --- ส่วนความปลอดภัย & ✅ ทางเข้า Admin (จุดที่คุณต้องการ) --- */}
+      {/* --- ส่วนความปลอดภัย & ทางเข้า Admin --- */}
       <section className="py-24 bg-slate-50/50">
         <div className="max-w-4xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center gap-10 p-12 bg-white rounded-[3rem] border border-slate-100 shadow-lg text-center md:text-left">
@@ -182,9 +243,6 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
             </div>
           </div>
 
-          {/* ----------------------------------------------------
-             ✅ ปุ่มเชื่อมไปยังหน้า LOGIN สำหรับเจ้าหน้าที่
-             ---------------------------------------------------- */}
           <div className="mt-24 pt-12 border-t border-slate-200 flex flex-col items-center">
             <div className="bg-white/80 backdrop-blur-sm p-2 rounded-2xl border border-slate-200 shadow-sm inline-flex items-center gap-1 mb-4">
                <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
@@ -194,7 +252,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
             </div>
             
             <button 
-              onClick={() => setView('admin-login')} // 👈 คลิกแล้วจะเด้งไปหน้า login ทันที
+              onClick={() => setView('admin-login')} 
               className="flex items-center gap-3 px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 rounded-2xl transition-all font-bold text-sm group"
             >
               <Lock className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
