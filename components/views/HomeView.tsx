@@ -25,7 +25,8 @@ import {
   MapPinned,
   Megaphone,
   Building2,
-  ExternalLink
+  ExternalLink,
+  Globe
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -40,11 +41,11 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
 
   // ข้อมูลลิงก์ภายนอก
   const quickLinks = [
-    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", icon: Calendar, color: "bg-orange-500" },
+   { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", icon: Calendar, color: "bg-orange-500" },
     { name: "Rawai One Map", url: "https://rawai-one-map.web.app/", icon: MapPinned, color: "bg-blue-500" },
     { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe", icon: Megaphone, color: "bg-pink-500" },
     { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", icon: Building2, color: "bg-indigo-500" },
-  ];
+    { name: "ศูนย์บริการ OSS", url: "https://www.dla.go.th/land/oss.do", icon: Globe, color: "bg-teal-500" }, // 👈 เพิ่มรายการนี้ ];
 
   useEffect(() => {
     if (!db) return;
