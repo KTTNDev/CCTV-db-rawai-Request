@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   collection, addDoc, query, where, getDocs, 
-  serverTimestamp 
+  serverTimestamp, doc, getDoc 
 } from 'firebase/firestore';
 import { 
   signInAnonymously, onAuthStateChanged, User as FirebaseUser 
@@ -136,8 +136,7 @@ const App = () => {
       // 1. บันทึกลง Firebase
       await addDoc(collection(db, "cctv_requests"), docData);
 
-      // 2. ✅ ส่งแจ้งเตือนผ่าน LINE Messaging API (Flex Message)
-      // ยิงไปที่ API Route เดียวกัน (/api/notify) แต่ Logic ข้างในเปลี่ยนเป็น Messaging API แล้ว
+      // 2. ✅ ส่งแจ้งเตือนผ่าน LINE โดยเรียก API Route ของ Vercel
       try {
         await fetch('/api/notify', {
           method: 'POST',
@@ -147,17 +146,17 @@ const App = () => {
           body: JSON.stringify({
             trackingId: trackingId,
             name: formData.name,
-            location: formData.location,
-            eventType: formData.eventType,
-            date: formData.eventDate,
-            time: `${formData.eventTimeStart}-${formData.eventTimeEnd}`,
-            // ส่งรูปภาพไปโชว์ใน Flex Message ด้วย (ถ้ามีรูปที่เกิดเหตุ หรือใบแจ้งความ)
-            imageUrl: sceneUrls.length > 0 ? sceneUrls[0] : (reportUrl || idCardUrl)
+            location: formData.location, // สถานที่
+            eventType: formData.eventType, // ประเภทเหตุการณ์
+            date: formData.eventDate, // วันที่เกิดเหตุ
+            timeStart: formData.eventTimeStart, // เวลาเริ่ม
+            timeEnd: formData.eventTimeEnd, // เวลาสิ้นสุด
           }),
         });
+        console.log("✅ Triggered LINE Notification API successfully!");
       } catch (notifyErr) {
-        console.error("Failed to send LINE Messaging API notification", notifyErr);
-        // ไม่ต้อง throw error เพื่อให้ user ไปหน้า success ได้ตามปกติ
+        console.error("❌ Failed to call LINE API Route:", notifyErr);
+        // ไม่ throw error ปล่อยให้ผู้ใช้ไปหน้า success ต่อไป
       }
 
       setSubmissionResult(docData);

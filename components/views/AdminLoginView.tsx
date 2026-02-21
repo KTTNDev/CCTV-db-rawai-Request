@@ -1,15 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-// ✅ เพิ่ม GoogleAuthProvider และ signInWithPopup
+// ✅ นำเข้า signOut เพิ่มเพื่อใช้เตะคนที่ไม่อยู่ใน Whitelist ออก
 import { auth } from '../../lib/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { Lock, ShieldCheck, ArrowLeft, Loader2, AlertCircle, Mail, Building2 } from 'lucide-react';
 
 interface AdminLoginViewProps {
   setView: (view: string) => void;
   onLoginSuccess: () => void;
 }
+
+// 🔐 รายชื่ออีเมลที่ได้รับอนุญาตให้เข้าถึงระบบ (Whitelist)
+const ALLOWED_EMAILS = [
+  'rawai.cctv@gmail.com',
+  'kittinanpolrob@gmail.com'
+  // 📝 สามารถเพิ่มอีเมลของเจ้าหน้าที่คนอื่นๆ ที่นี่ได้เลยครับ
+];
 
 const AdminLoginView: React.FC<AdminLoginViewProps> = ({ setView, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -19,31 +26,48 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ setView, onLoginSuccess
 
   const brandGradient = "linear-gradient(90deg, hsla(222, 51%, 34%, 1) 0%, hsla(119, 37%, 45%, 1) 100%)";
 
-  // ✅ ฟังก์ชัน Login ด้วย Google (Gmail)
+  // 🛡️ ฟังก์ชันตรวจสอบอีเมล (Gatekeeper)
+  const checkAccess = async (userEmail: string | null) => {
+    if (userEmail && ALLOWED_EMAILS.includes(userEmail.toLowerCase())) {
+      console.log("✅ Admin Access Granted:", userEmail);
+      onLoginSuccess();
+    } else {
+      console.log("⛔ Unauthorized Access:", userEmail);
+      await signOut(auth); // เตะออกจากระบบ Firebase ทันที
+      setError(`ปฏิเสธการเข้าถึง: บัญชี ${userEmail || 'นี้'} ไม่มีสิทธิ์ในระบบ`);
+      setLoading(false);
+    }
+  };
+
+  // ✅ ฟังก์ชัน Login ด้วย Google
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
     const provider = new GoogleAuthProvider();
     
     try {
-      await signInWithPopup(auth, provider);
-      console.log("✅ เข้าสู่ระบบด้วย Gmail สำเร็จ");
-      onLoginSuccess();
+      const result = await signInWithPopup(auth, provider);
+      // ส่งอีเมลไปตรวจสอบกับรายชื่อที่อนุญาต
+      await checkAccess(result.user.email);
     } catch (err: any) {
       console.error("Google Login Error:", err.code);
-      setError('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่ครับ');
+      setError('ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง');
       setLoading(false);
     }
   };
 
+  // ✅ ฟังก์ชัน Login ด้วย Email/Password
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      onLoginSuccess();
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      // ส่งอีเมลไปตรวจสอบกับรายชื่อที่อนุญาต
+      await checkAccess(result.user.email);
     } catch (err: any) {
+      console.error("Email Login Error:", err);
       setError('อีเมลหรือรหัสผ่านไม่ถูกต้องครับ');
       setLoading(false);
     }
@@ -66,14 +90,15 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ setView, onLoginSuccess
           </div>
 
           <div className="p-10 space-y-6">
+            {/* 🚨 แจ้งเตือน Error กรณีอีเมลไม่อยู่ใน Whitelist */}
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-xs font-bold animate-in shake">
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600 text-xs font-bold animate-in shake">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                {error}
+                <p className="leading-relaxed">{error}</p>
               </div>
             )}
 
-            {/* 🔴 ปุ่ม Login ด้วย Google (ทันสมัยสุดๆ) */}
+            {/* 🔴 ปุ่ม Login ด้วย Google */}
             <button 
               onClick={handleGoogleLogin}
               disabled={loading}
@@ -89,7 +114,7 @@ const AdminLoginView: React.FC<AdminLoginViewProps> = ({ setView, onLoginSuccess
               <div className="flex-grow border-t border-slate-100"></div>
             </div>
 
-            {/* ฟอร์ม Email/Password เดิม */}
+            {/* ฟอร์ม Email/Password */}
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">อีเมลเจ้าหน้าที่</label>
