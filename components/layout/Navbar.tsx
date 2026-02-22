@@ -26,7 +26,7 @@ const Navbar: React.FC<NavbarProps> = ({ view, setView, onRequestClick }) => {
           >
             <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 bg-slate-100 flex-shrink-0">
                <img 
-                  src="https://rawaicity.app/__images/banner.png" 
+                  src="https://lh3.googleusercontent.com/d/1FJrVPCxuFeZU4rO9RROFSn-2zv8X7-rW=w250?authuser=0" 
                   alt="Rawai CCTV Logo" 
                   className="w-full h-full object-cover"
                />

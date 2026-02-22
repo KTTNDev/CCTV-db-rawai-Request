@@ -26,11 +26,11 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
 
   const quickLinks = [
     { name: "หน้าหลักรวมบริการ", url: "https://e-service-rawai-center.vercel.app/", icon: Building, color: "bg-teal-500" },
-    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", icon: Calendar, color: "bg-orange-500" },
-    { name: "Rawai One Map", url: "https://rawai-one-map.web.app/", icon: MapPinned, color: "bg-blue-500" },
-    { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe", icon: Megaphone, color: "bg-pink-500" },
-    { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", icon: Building2, color: "bg-indigo-500" },
-    { name: "ศูนย์บริการ OSS", url: "https://www.dla.go.th/land/oss.do", icon: Globe, color: "bg-teal-500" }
+    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-orange-500" },
+    { name: "Rawai One Map", url: "https://rawai-one-map.web.app/",imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-blue-500" },
+    { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe",  imageUrl: "https://www.nstda.or.th/nac/2023/wp-content/uploads/2023/03/ex-faeature-image_ex07.webp", color: "bg-pink-500" },
+    { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", imageUrl: "https://www.eoffice.go.th/img/Logo-e-Office.png", color: "bg-indigo-500" },
+    { name: "ศูนย์บริการ OSS", url: "https://www.dla.go.th/land/oss.do", imageUrl: "https://www.dla.go.th/images/logo.png", color: "bg-teal-500" }
   ];
 
   useEffect(() => {
