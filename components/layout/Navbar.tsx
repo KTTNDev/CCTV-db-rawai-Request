@@ -24,9 +24,9 @@ const Navbar: React.FC<NavbarProps> = ({ view, setView, onRequestClick }) => {
             onClick={() => setView('home')} 
             className="flex items-center gap-3.5 cursor-pointer group select-none"
           >
-            <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 bg-slate-100 flex-shrink-0">
+            <div className="relative w-12 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 bg-slate-100 flex-shrink-0">
                <img 
-                  src="https://lh3.googleusercontent.com/d/1FJrVPCxuFeZU4rO9RROFSn-2zv8X7-rW=w250?authuser=0" 
+                  src="https://lh3.googleusercontent.com/d/1QCbgntRqbIAlTmTBE85DEtJtx91U-1ll?authuser=0" 
                   alt="Rawai CCTV Logo" 
                   className="w-full h-full object-cover"
                />

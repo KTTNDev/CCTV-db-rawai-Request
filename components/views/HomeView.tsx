@@ -25,12 +25,12 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   const brandGradient = "linear-gradient(90deg, hsla(160, 50%, 51%, 1) 0%, hsla(247, 60%, 21%, 1) 100%)";
 
   const quickLinks = [
-    { name: "หน้าหลักรวมบริการ", url: "https://e-service-rawai-center.vercel.app/", icon: Building, color: "bg-teal-500" },
-    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-orange-500" },
-    { name: "Rawai One Map", url: "https://rawai-one-map.web.app/",imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-blue-500" },
-    { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe",  imageUrl: "https://www.nstda.or.th/nac/2023/wp-content/uploads/2023/03/ex-faeature-image_ex07.webp", color: "bg-pink-500" },
-    { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", imageUrl: "https://www.eoffice.go.th/img/Logo-e-Office.png", color: "bg-indigo-500" },
-    { name: "ศูนย์บริการ OSS", url: "https://www.dla.go.th/land/oss.do", imageUrl: "https://www.dla.go.th/images/logo.png", color: "bg-teal-500" }
+    { name: "หน้าหลักรวมบริการ", url: "https://e-service-rawai-center.vercel.app/", imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png",  color:  "bg-blue-50" },
+    { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-blue-50"  },
+    { name: "Rawai One Map", url: "https://rawai-one-map.web.app/",imageUrl: "https://www.rawai.go.th/images/header-72-1/logo_0004.png", color: "bg-blue-50" },
+    { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe",  imageUrl: "https://www.nstda.or.th/nac/2023/wp-content/uploads/2023/03/ex-faeature-image_ex07.webp", color: "bg-blue-50"  },
+    { name: "ระบบ E-Office", url: "https://rawai.s.eoffice.go.th/portal/home", imageUrl: "https://www.eoffice.go.th/img/Logo-e-Office.png", color: "bg-indigo-50" },
+    { name: "ศูนย์บริการ OSS", url: "https://www.dla.go.th/land/oss.do", imageUrl: "https://www.dla.go.th/images/logo.png", color: "bg-blue-50"  }
   ];
 
   useEffect(() => {
@@ -105,8 +105,8 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
             <div className="p-3 space-y-1">
               {quickLinks.map((link, idx) => (
                 <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
-                  <div className={`w-10 h-10 rounded-xl ${link.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}><link.icon className="w-5 h-5" /></div>
-                  <div className="flex-1 text-left"><p className="text-xs font-black text-slate-700 leading-tight">{link.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase">External Link</p></div>
+                  <div className={`w-10 h-10 rounded-xl ${link.color} text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}><img src= {link.imageUrl} className="w-7" /></div>
+                  <div className="flex-1 text-left"><p className="text-xs font-black text-slate-700 leading-tight">{link.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase">เข้าใช้งาน</p></div>
                   <ExternalLink className="w-3 h-3 text-slate-300" />
                 </a>
               ))}
