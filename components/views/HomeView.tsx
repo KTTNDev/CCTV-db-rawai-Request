@@ -10,7 +10,7 @@ import LiveCCTVGallery from '../ui/LiveCCTVGallery';
 import { 
   Camera, Search, FileText, Upload, CheckCircle, User, Activity, 
   ShieldCheck, Zap, Lock, Settings, LayoutGrid, X, Calendar, 
-  MapPinned, Megaphone, Building2, ExternalLink, Globe, Users
+  MapPinned, Megaphone, Building2, ExternalLink, Globe, Users, Building,
 } from 'lucide-react';
 
 interface HomeViewProps {
@@ -25,6 +25,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
   const brandGradient = "linear-gradient(90deg, hsla(160, 50%, 51%, 1) 0%, hsla(247, 60%, 21%, 1) 100%)";
 
   const quickLinks = [
+    { name: "หน้าหลักรวมบริการ", url: "https://e-service-rawai-center.vercel.app/", icon: Building, color: "bg-teal-500" },
     { name: "กิจกรรมราไวย์", url: "https://www.rawai.go.th/event.php", icon: Calendar, color: "bg-orange-500" },
     { name: "Rawai One Map", url: "https://rawai-one-map.web.app/", icon: MapPinned, color: "bg-blue-500" },
     { name: "Traffy Fondue", url: "https://landing.traffy.in.th?key=elqOlHUe", icon: Megaphone, color: "bg-pink-500" },
