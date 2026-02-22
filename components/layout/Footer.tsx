@@ -46,7 +46,7 @@ const Footer = () => (
       </div>
 
       <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-400 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p>© 2025 เทศบาลตำบลราไวย์. สงวนลิขสิทธิ์.</p>
+        <p>พัฒนาโดย ทีมฝ่ายนโยบายและแผน เทศบาลตำบลราไวย์</p>
         <div className="flex gap-6">
           <a href="#" className="hover:text-gray-600">นโยบายความเป็นส่วนตัว</a>
           <a href="#" className="hover:text-gray-600">ข้อตกลงการใช้งาน</a>
