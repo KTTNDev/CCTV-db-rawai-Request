@@ -1,7 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Upload, FileText, Trash2, LucideIcon } from 'lucide-react';
+import { Upload, FileText, Trash2, LucideIcon, Loader2 } from 'lucide-react';
+// 1. Import ไลบรารีบีบอัดภาพ
+import imageCompression from 'browser-image-compression';
+
+
 
 interface FileUploaderProps {
   label: string;
@@ -11,25 +15,41 @@ interface FileUploaderProps {
   files: any; // รับได้ทั้ง File หรือ File[]
   onFileChange: (files: any) => void;
 }
+const FileUploader = ({ label, description, icon: Icon = Upload, multiple = false, files, onFileChange }: FileUploaderProps) => {
+  const [compressing, setCompressing] = React.useState(false);
 
-const FileUploader = ({ 
-  label, 
-  description, 
-  icon: Icon = Upload, 
-  multiple = false, 
-  files, 
-  onFileChange 
-}: FileUploaderProps) => {
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      if (multiple) {
-        // กรณีเลือกได้หลายไฟล์ ให้เอาของใหม่ไปต่อท้ายของเดิม
-        onFileChange([...(Array.isArray(files) ? files : []), ...newFiles]);
-      } else {
-        // กรณีไฟล์เดียว ให้ทับตัวเดิมไปเลย
-        onFileChange(newFiles[0]);
+      setCompressing(true); // เริ่มสถานะบีบอัด
+      const selectedFiles = Array.from(e.target.files);
+      const processedFiles: File[] = [];
+
+      // 2. ตั้งค่าการบีบอัด (เช่น บีบให้ไม่เกิน 1MB หรือกว้างไม่เกิน 1280px)
+      const options = {
+        maxSizeMB: 2,
+        useWebWorker: true,
+      };
+
+      try {
+        for (const file of selectedFiles) {
+          // ถ้าเป็นภาพให้บีบอัด ถ้าเป็น PDF ให้ส่งไปตรงๆ (เพราะบีบ PDF ฝั่ง Client ยากกว่าครับ)
+          if (file.type.startsWith('image/')) {
+            const compressedFile = await imageCompression(file, options);
+            processedFiles.push(compressedFile as File);
+          } else {
+            processedFiles.push(file);
+          }
+        }
+
+        if (multiple) {
+          onFileChange([...(Array.isArray(files) ? files : []), ...processedFiles]);
+        } else {
+          onFileChange(processedFiles[0]);
+        }
+      } catch (error) {
+        console.error("Compression error:", error);
+      } finally {
+        setCompressing(false); // จบบีบอัด
       }
     }
   };
