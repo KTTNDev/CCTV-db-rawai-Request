@@ -59,12 +59,12 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  const [formData, setFormData] = useState<FormDataState>({
-    name: '', nationalId: '', phone: '', email: '', eventDate: '',
-    eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '', 
-    latitude: null, longitude: null, description: '', deliveryMethod: 'LINE'
-  });
-
+const [formData, setFormData] = useState<FormDataState>({
+  name: '', nationalId: '', phone: '', email: '', eventDate: '',
+  eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '', 
+  latitude: null, longitude: null, description: '', deliveryMethod: 'LINE',
+  involvedForeigner: 'no' // ✅ เพิ่มบรรทัดนี้ครับจารย์ฟลุ๊ค
+});
   const [files, setFiles] = useState<FileState>({
     idCard: null, report: null, scene: []
   });
