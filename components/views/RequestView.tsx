@@ -83,11 +83,7 @@ const RequestView: React.FC<RequestViewProps> = ({
       showToast("กรุณาระบุลักษณะการเกิดอุบัติเหตุ");
       return;
     }
-// ✅ เพิ่มการเช็คชาวต่างชาติ เฉพาะเคสอุบัติเหตุ
-  if (formData.eventType === 'ACCIDENT' && !formData.involvedForeigner) {
-    showToast("กรุณาระบุว่ามีคู่กรณีเกี่ยวข้องกับชาวต่างชาติหรือไม่");
-    return;
-  }
+
     // ✅ ถ้าผ่านทุกด่าน ให้ส่งข้อมูลจริง
     await handleSubmitRequest(e);
   };
@@ -222,57 +218,24 @@ const RequestView: React.FC<RequestViewProps> = ({
                 </div>
               </div>
 
-        {formData.eventType === 'ACCIDENT' && (
-  <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-top-2">
-    
-    {/* ส่วนเลือก: ลักษณะการเกิดอุบัติเหตุ (ของเดิมที่จารย์ฟลุ๊คมีอยู่แล้ว) */}
-    <div>
-      <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">
-        ลักษณะการเกิดอุบัติเหตุ <span className="text-red-500">*</span>
-      </label>
-      <div className="relative group">
-        <select required className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none" value={formData.accidentSubtype || ''} onChange={e => setFormData({...formData, accidentSubtype: e.target.value})}>
-          <option value="">-- เลือกลักษณะการเกิดเหตุ --</option>
-          <option value="MC_VS_MC">1. รถจักรยานยนต์ ชน รถจักรยานยนต์</option>
-          <option value="MC_VS_CAR">2. รถจักรยานยนต์ ชน รถยนต์</option>
-          <option value="CAR_VS_CAR">3. รถยนต์ ชน รถยนต์</option>
-          <option value="PEDESTRIAN">4. ชนคนเดินเท้า</option>
-          <option value="HIT_AND_RUN">5. ชนแล้วหนี</option>
-          <option value="OTHER">6. อื่นๆ</option>
-        </select>
-        <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
-      </div>
-    </div>
+              {formData.eventType === 'ACCIDENT' && (
+                <div className="mt-8 animate-in fade-in slide-in-from-top-2">
+                  <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">ลักษณะการเกิดอุบัติเหตุ <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <select required className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none" value={formData.accidentSubtype || ''} onChange={e => setFormData({...formData, accidentSubtype: e.target.value})}>
+                      <option value="">-- เลือกลักษณะการเกิดเหตุ --</option>
+                      <option value="MC_VS_MC">1. รถจักรยานยนต์ ชน รถจักรยานยนต์</option>
+                      <option value="MC_VS_CAR">2. รถจักรยานยนต์ ชน รถยนต์</option>
+                      <option value="CAR_VS_CAR">3. รถยนต์ ชน รถยนต์</option>
+                      <option value="PEDESTRIAN">4. ชนคนเดินเท้า</option>
+                      <option value="HIT_AND_RUN">5. ชนแล้วหนี</option>
+                      <option value="OTHER">6. อื่นๆ</option>
+                    </select>
+                    <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
+                  </div>
+                </div>
+              )}
 
-    {/* ✅ ส่วนที่เพิ่มใหม่: เกี่ยวข้องกับต่างชาติ (จะแสดงเฉพาะเคสอุบัติเหตุ) */}
-    <div className="space-y-3">
-      <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1">
-        เหตุการณ์นี้มีชาวต่างชาติหรือไม่? <span className="text-red-500">*</span>
-      </label>
-   <div className="grid grid-cols-3 gap-4">
-  {[
-    { id: 'yes', label: 'มี', color: 'border-red-200 bg-red-50 text-red-700' },
-    { id: 'no', label: 'ไม่มี', color: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-    { id: 'unknown', label: 'ไม่แน่ใจ', color: 'border-slate-200 bg-slate-50 text-slate-500' }
-  ].map((option) => (
-    <button
-      key={option.id}
-      type="button"
-      onClick={() => setFormData({ ...formData, involvedForeigner: option.id as any })}
-      className={`p-4 rounded-2xl border-2 font-bold text-sm transition-all ${
-        formData.involvedForeigner === option.id 
-          ? option.color + ' ring-4 ring-offset-2 ring-blue-100 shadow-sm scale-[1.02]' 
-          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-300 hover:bg-slate-50'
-      }`}
-    >
-      {option.label}
-    </button>
-  ))}
-</div>
-    </div>
-
-  </div>
-)}
               <div className="mt-8 space-y-2">
                 <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">รายละเอียดเพิ่มเติม <span className="text-red-500">*</span></label>
                 <textarea required rows={4} className="w-full px-8 py-5 bg-white border border-slate-200 rounded-[2rem] focus:ring-4 focus:ring-blue-50 outline-none resize-none shadow-sm" placeholder="อธิบายลักษณะเหตุการณ์, สีรถ, ทะเบียน..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
