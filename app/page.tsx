@@ -58,12 +58,24 @@ const App = () => {
     });
     return () => unsubscribe();
   }, []);
-
-  const [formData, setFormData] = useState<FormDataState>({
-    name: '', nationalId: '', phone: '', email: '', eventDate: '',
-    eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '', 
-    latitude: null, longitude: null, description: '', deliveryMethod: 'LINE'
-  });
+const [formData, setFormData] = useState<FormDataState>({
+  name: '',
+  isForeigner: 'THAI',      // ✅ เพิ่ม: default เป็นคนไทย
+  nationalId: '',
+  passportNumber: '',       // ✅ เพิ่ม
+  isForeignerInvolved: '',  // ✅ เพิ่ม
+  phone: '',
+  email: '',
+  eventDate: '',
+  eventTimeStart: '',
+  eventTimeEnd: '',
+  eventType: '',
+  location: '', 
+  latitude: null,
+  longitude: null,
+  description: '',
+  deliveryMethod: 'LINE'
+});
 
   const [files, setFiles] = useState<FileState>({
     idCard: null, report: null, scene: []
@@ -161,12 +173,23 @@ const App = () => {
 
       setSubmissionResult(docData);
       setView('success');
-      
-      setFormData({
-        name: '', nationalId: '', phone: '', email: '', eventDate: '',
-        eventTimeStart: '', eventTimeEnd: '', eventType: '', location: '',
-        latitude: null, longitude: null, description: '', deliveryMethod: 'LINE'
-      });
+    setFormData({
+ name: '',
+  isForeigner: 'THAI',      // ✅ เพิ่ม: default เป็นคนไทย
+  nationalId: '',
+  passportNumber: '',       // ✅ เพิ่ม
+  isForeignerInvolved: '',  // ✅ เพิ่ม
+  phone: '',
+  email: '',
+  eventDate: '',
+  eventTimeStart: '',
+  eventTimeEnd: '',
+  eventType: '',
+  location: '', 
+  latitude: null,
+  longitude: null,
+  description: '',
+  deliveryMethod: 'LINE'});
       setFiles({ idCard: null, report: null, scene: [] });
 
     } catch (err: any) {

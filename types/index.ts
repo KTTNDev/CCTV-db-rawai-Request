@@ -6,7 +6,9 @@ export interface FileState {
 
 export interface FormDataState {
   name: string;
+isForeigner: string; // ✅ เพิ่ม: 'THAI' หรือ 'FOREIGNER'
   nationalId: string;
+  passportNumber: string; // ✅ เพิ่ม
   phone: string;
   email: string;
   eventDate: string;
@@ -15,6 +17,7 @@ export interface FormDataState {
   eventType: string;
   // ✅ ต้องมีบรรทัดนี้ เพื่อให้ TypeScript รู้จักฟิลด์นี้ตอน Build
   accidentSubtype?: string; 
+  isForeignerInvolved: string; // ✅ เพิ่มบรรทัดนี้ (บรรทัดที่ 16 โดยประมาณ)
   location: string;
   latitude: number | null;
   longitude: number | null;
@@ -38,7 +41,9 @@ export interface CCTVRequest {
   
   // ข้อมูลจาก FormData
   name: string;
+  isForeigner: string; // ✅ เพิ่ม
   nationalId: string;
+  passportNumber?: string; // ✅ เพิ่ม
   phone: string;
   email?: string;
   eventDate: string;
@@ -46,6 +51,7 @@ export interface CCTVRequest {
   eventTimeEnd: string;
   eventType: string;
   accidentSubtype?: string;
+  isForeignerInvolved?: string; // ✅ เพิ่มบรรทัดนี้ (บรรทัดที่ 49 โดยประมาณ)
   location: string;
   latitude: number;
   longitude: number;

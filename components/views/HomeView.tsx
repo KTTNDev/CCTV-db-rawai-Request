@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// ✅ เปลี่ยนจาก onSnapshot เป็น getDoc เพื่อประหยัดโควตา
 import { collection, query, where, getCountFromServer, doc, setDoc, increment, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import AccidentMap from '../ui/AccidentMap';
 import LiveCCTVGallery from '../ui/LiveCCTVGallery';
 
 import { 
-  Camera, Search, FileText, Upload, CheckCircle, User, Activity, 
+  Camera, Play, Maximize2, Radio, Search, FileText, Upload, CheckCircle, User, Activity, 
   ShieldCheck, Zap, Lock, Settings, LayoutGrid, X, Calendar, 
   MapPinned, Megaphone, Building2, ExternalLink, Globe, Users, Building,
 } from 'lucide-react';
@@ -18,7 +17,11 @@ interface HomeViewProps {
   onRequestClick: () => void;
 }
 
+// URL กล้องแหลมพรหมเทพ (ตัวอย่าง YouTube Live)
+const PROMTHEP_LIVE_URL = "https://www.youtube.com/embed/JBjVYDDx_dA?autoplay=1&mute=1&controls=0&loop=1"; 
+
 const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
+  const [showLiveModal, setShowLiveModal] = useState(false);
   const [stats, setStats] = useState({ total: 0, successRate: 0, pending: 0 });
   const [visitorStats, setVisitorStats] = useState({ today: 0, total: 0 });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,16 +38,13 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
 
   useEffect(() => {
     if (!db) return;
-
     const todayStr = new Date().toLocaleDateString('en-CA');
-
-    // ✅ 1. ระบบดักนับและดึงสถิติผู้เข้าชมแบบ One-time (ประหยัดโควตา)
+    
     const handleAnalytics = async () => {
       try {
         const hasVisited = sessionStorage.getItem('rawai_v_2026');
         const dailyRef = doc(db, 'site_analytics', todayStr);
         const globalRef = doc(db, 'site_analytics', 'global_stats');
-
         if (!hasVisited) {
           await Promise.all([
             setDoc(dailyRef, { visits: increment(1), date: todayStr }, { merge: true }),
@@ -52,13 +52,7 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
           ]);
           sessionStorage.setItem('rawai_v_2026', 'true');
         }
-
-        // ดึงข้อมูลมาโชว์แค่ครั้งเดียวตอนโหลดหน้า
-        const [todaySnap, globalSnap] = await Promise.all([
-          getDoc(dailyRef),
-          getDoc(globalRef)
-        ]);
-
+        const [todaySnap, globalSnap] = await Promise.all([getDoc(dailyRef), getDoc(globalRef)]);
         setVisitorStats({
           today: todaySnap.exists() ? todaySnap.data().visits || 0 : 0,
           total: globalSnap.exists() ? globalSnap.data().totalVisits || 0 : 0
@@ -66,24 +60,19 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
       } catch (e) { console.error("Analytics Error:", e); }
     };
 
-    // ✅ 2. ระบบดึงสถิติคำร้อง CCTV (ใช้ getCountFromServer ซึ่งประหยัดมาก)
     const fetchCCTVStats = async () => {
       try {
         const coll = collection(db, 'cctv_requests');
-        
         const [totalSnap, completedSnap, pendingSnap] = await Promise.all([
           getCountFromServer(coll),
           getCountFromServer(query(coll, where('status', '==', 'completed'))),
           getCountFromServer(query(coll, where('status', 'in', ['pending', 'processing', 'verifying', 'searching'])))
         ]);
-
         const total = totalSnap.data().count;
         const completed = completedSnap.data().count;
         const pending = pendingSnap.data().count;
         const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
         setStats({ total, successRate: rate, pending });
-        console.log("📊 CCTV Stats Loaded");
       } catch (e) { console.error("CCTV Stats Error:", e); }
     };
 
@@ -119,46 +108,147 @@ const HomeView: React.FC<HomeViewProps> = ({ setView, onRequestClick }) => {
         </button>
       </div>
 
-      {/* --- Section: Hero --- */}
-      <section className="relative pt-20 pb-32 overflow-hidden bg-white text-center">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full blur-[150px] opacity-20" style={{ background: brandGradient }}></div>
+      {/* --- Section: Hero (🚀 Improved Version with Live Card) --- */}
+     <section className="relative pt-28 pb-40 md:pt-40 md:pb-52 overflow-hidden text-white">
+        <div className="absolute inset-0 z-0">
+          <div 
+            className="absolute inset-0 bg-cover bg-center parallax-bg"
+            style={{ 
+              backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.98), #f8fafc), url('/Untitled design (12).png')`,
+              backgroundAttachment: 'fixed',
+              backgroundColor: '#0f172a'
+            }}
+          ></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[60%] rounded-full blur-[120px] opacity-20" style={{ background: brandGradient }}></div>
         </div>
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-100 text-teal-800 text-xs font-bold mb-10 shadow-sm">
-            <Zap className="w-3.5 h-3.5 text-teal-600 fill-teal-600" />
-            <span>Digital CCTV Service Portal - เทศบาลตำบลราไวย์</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 tracking-tight leading-[1] mb-8">ขอข้อมูลภาพ <br /><span className="text-transparent bg-clip-text" style={{ backgroundImage: brandGradient }}>กล้องวงจรปิด</span></h1>
-          <p className="max-w-2xl mx-auto text-slate-500 text-lg md:text-xl leading-relaxed mb-12 font-medium">ยกระดับความปลอดภัยด้วยระบบยื่นคำร้องดิจิทัล สะดวก รวดเร็ว และตรวจสอบได้</p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-            <button onClick={onRequestClick} className="group relative w-full sm:w-auto px-10 py-5 rounded-2xl text-white font-bold text-lg shadow-2xl transition-all hover:scale-105 active:scale-95 overflow-hidden" style={{ background: brandGradient }}>
-              <div className="flex items-center justify-center gap-3"><Camera className="w-6 h-6" /><span>ยื่นคำร้องออนไลน์</span></div>
-            </button>
-            <button onClick={() => setView('track')} className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white text-slate-700 font-bold text-lg border border-slate-200 shadow-sm transition-all hover:bg-slate-50">
-              <div className="flex items-center justify-center gap-3"><Search className="w-5 h-5 text-slate-400" /><span>ติดตามสถานะ</span></div>
-            </button>
-          </div>
-        </div>
-      </section>
 
-      <section className="py-24 bg-slate-50/50 border-y border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 mb-20"><AccidentMap /></div>
-        <LiveCCTVGallery /> 
-      </section>
+        <div className="relative z-10 max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+          
+          {/* 📝 ฝั่งซ้าย: ข้อความ (ปรับลดขนาดเหลือ col-span-5 เพื่อแบ่งพื้นที่ให้กล้อง) */}
+          <div className="lg:col-span-5 text-left animate-in fade-in slide-in-from-left-12 duration-1000">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-emerald-300 text-[9px] md:text-xs font-black uppercase tracking-[0.3em] mb-6 shadow-2xl">
+              <Zap className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+              <span>Smart CCTV Portal • 2026</span>
+            </div>
 
-      <section className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="relative p-12 md:p-20 rounded-[3.5rem] overflow-hidden shadow-2xl" style={{ background: brandGradient }}>
-            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-16 text-white text-center md:text-left">
-              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">เรื่องในระบบ</p><h3 className="text-6xl font-black">{stats.total.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3></div>
-              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">ความสำเร็จ</p><h3 className="text-6xl font-black">{stats.successRate}%</h3></div>
-              <div><p className="text-white/70 text-xs font-black uppercase tracking-widest mb-2">กำลังดำเนินการ</p><h3 className="text-6xl font-black">{stats.pending.toLocaleString()} <span className="text-xl opacity-50">ราย</span></h3></div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-[0.95] mb-6 drop-shadow-2xl">
+              ขอข้อมูลภาพ <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-200">
+                กล้องวงจรปิด
+              </span>
+            </h1>
+            
+            <p className="max-w-md text-slate-300 text-sm md:text-lg leading-relaxed mb-8 font-medium opacity-80">
+              ยกระดับความปลอดภัยชาวราไวย์ด้วยระบบดิจิทัล <br className="hidden md:block" /> 
+              สัมผัสความโปร่งใสผ่านกล้องสดแหลมพรหมเทพ
+            </p>
+
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={onRequestClick} 
+                className="group relative w-full px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 overflow-hidden" 
+                style={{ background: brandGradient }}
+              >
+                <Camera className="w-6 h-6" />
+                <span>ยื่นคำร้องออนไลน์</span>
+              </button>
+              <button 
+                onClick={() => setView('track')} 
+                className="w-full px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-xl text-white font-bold text-lg border border-white/20 shadow-xl transition-all hover:bg-white/20"
+              >
+                <span>ติดตามสถานะคำร้อง</span>
+              </button>
             </div>
           </div>
+
+          {/* 🎥 ฝั่งขวา: Live Stream Card (ขยายร่างเป็น col-span-7) */}
+          <div className="lg:col-span-7 relative group animate-in fade-in slide-in-from-right-12 duration-1000">
+            {/* กล่องวิดีโอที่ใหญ่ขึ้นและดูพรีเมียมขึ้น */}
+            <div className="relative p-2.5 bg-white/10 backdrop-blur-2xl rounded-[3.5rem] border border-white/20 shadow-[0_45px_100px_-20px_rgba(0,0,0,0.6)] overflow-hidden transition-all group-hover:shadow-[0_45px_100px_-10px_rgba(16,185,129,0.3)] group-hover:scale-[1.01]">
+              
+              {/* Live Badge แบบใหม่ */}
+              <div className="absolute top-8 left-8 z-20 flex items-center gap-2.5 px-4 py-2 bg-red-600 rounded-full text-white text-xs font-black uppercase tracking-[0.2em] shadow-2xl">
+                <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping"></div>
+                <Radio className="w-4 h-4" />
+                Live Phromthep Cape
+              </div>
+
+              {/* Video Content: เพิ่มความสูงและเงาภายใน */}
+              <div className="aspect-video w-full rounded-[3rem] overflow-hidden bg-slate-900 relative shadow-inner">
+                <iframe 
+                  className="w-full h-full object-cover scale-105 pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity" 
+                  src={PROMTHEP_LIVE_URL}
+                  title="Promthep Live Stream"
+                  allow="autoplay; encrypted-media"
+                ></iframe>
+                
+                {/* Overlay ป้องกันแสงจ้าเกินไป */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                
+                <div className="absolute bottom-8 left-8 z-20 flex items-end justify-between right-8">
+                  <div>
+                    <p className="text-white text-xl font-black tracking-tight">Promthep Cape, Phuket</p>
+                    <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest">Real-time Monitoring System</p>
+                  </div>
+                  
+                  {/* ปุ่ม Maximize ที่ดูเด่นขึ้น */}
+                  <button 
+                    onClick={() => setShowLiveModal(true)}
+                    className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-2xl transition-all hover:bg-emerald-400 hover:rotate-6 active:scale-90"
+                  >
+                    <Maximize2 className="w-7 h-7" />
+                  </button>
+                </div>
+              </div>
+            </div>
+           
+          </div>
+        </div>
+
+        {/* 📊 Horizontal Stats Overlay (Bottom of Banner) */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 mt-20 grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-3xl">
+            <p className="text-[15px] text-emerald-300 font-black uppercase tracking-widest mb-1">จำนวนคำร้องทั้งหมด</p>
+            <p className="text-2xl font-black text-white">{stats.total.toLocaleString()}</p>
+          </div>
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-3xl">
+            <p className="text-[15px] text-emerald-300 font-black uppercase tracking-widest mb-1">อัตราการดำเนินการ</p>
+            <p className="text-2xl font-black text-white">{stats.successRate}%</p>
+          </div>
+          
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-3xl">
+            <p className="text-[15px] text-emerald-300 font-black uppercase tracking-widest mb-1">คำร้องที่รอดำเนินการ</p>
+            <p className="text-2xl font-black text-white">{stats.pending.toLocaleString()}</p>
+          </div>
         </div>
       </section>
 
+      {/* --- 🎬 Live Full Modal (Popup) --- */}
+      {showLiveModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-12 bg-slate-900/95 backdrop-blur-xl">
+          <button 
+            onClick={() => setShowLiveModal(false)}
+            className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="w-full max-w-6xl aspect-video rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
+            <iframe 
+              className="w-full h-full" 
+              src={PROMTHEP_LIVE_URL.replace("controls=0", "controls=1")}
+              title="Full Live Phromthep"
+              allow="autoplay; encrypted-media; fullscreen"
+            ></iframe>
+          </div>
+        </div>
+      )}
+
+      {/* --- Existing Sections Below --- */}
+      <section className="py-24 bg-slate-50/50 border-y border-slate-100">
+        <div className="max-w-6xl mx-auto px-6 mb-20"><AccidentMap /></div>
+      </section>
+
+     
       <section className="py-20 bg-slate-50/50">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="flex flex-col md:flex-row items-center gap-10 p-12 bg-white rounded-[3rem] border border-slate-100 shadow-lg text-left mb-16">

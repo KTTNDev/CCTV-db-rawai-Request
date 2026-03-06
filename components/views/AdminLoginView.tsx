@@ -14,7 +14,8 @@ interface AdminLoginViewProps {
 // 🔐 รายชื่ออีเมลที่ได้รับอนุญาตให้เข้าถึงระบบ (Whitelist)
 const ALLOWED_EMAILS = [
   'rawai.cctv@gmail.com',
-  'kittinanpolrob@gmail.com'
+  'kittinanpolrob@gmail.com',
+  'phuketpao.evaluation@gmail.com'
   // 📝 สามารถเพิ่มอีเมลของเจ้าหน้าที่คนอื่นๆ ที่นี่ได้เลยครับ
 ];
 

@@ -68,10 +68,17 @@ const RequestView: React.FC<RequestViewProps> = ({
       return;
     }
 
-    // เช็คความครบถ้วนของข้อมูลส่วนตัว
-    if (formData.nationalId.length !== 13) {
-      showToast("กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก");
-      return;
+  // ✅ ปรับการเช็คเลขประจำตัว
+    if (formData.isForeigner === 'THAI') {
+      if (formData.nationalId.length !== 13) {
+        showToast("กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก");
+        return;
+      }
+    } else {
+      if (!formData.passportNumber || formData.passportNumber.length < 5) {
+        showToast("กรุณากรอกเลขที่พาสปอร์ตให้ถูกต้อง");
+        return;
+      }
     }
     if (formData.phone.length < 9) {
       showToast("กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง");
@@ -81,6 +88,12 @@ const RequestView: React.FC<RequestViewProps> = ({
     // เช็คประเภทเหตุการณ์
     if (formData.eventType === 'ACCIDENT' && !formData.accidentSubtype) {
       showToast("กรุณาระบุลักษณะการเกิดอุบัติเหตุ");
+      return;
+    }
+
+    // ✅ เพิ่มส่วนนี้: เช็คเรื่องชาวต่างชาติ (บังคับเลือกถ้าเป็นอุบัติเหตุ)
+    if (formData.eventType === 'ACCIDENT' && !formData.isForeignerInvolved) {
+      showToast("กรุณาระบุว่าเหตุการณ์นี้เกี่ยวข้องกับชาวต่างชาติหรือไม่");
       return;
     }
 
@@ -138,37 +151,49 @@ const RequestView: React.FC<RequestViewProps> = ({
             )}
 
             {/* ส่วนที่ 1: ข้อมูลผู้ยื่น */}
-            <FormSection title="1. ข้อมูลผู้ยื่นคำร้อง">
-              <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">ชื่อ-นามสกุลจริง <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
-                    <input required type="text" className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium" placeholder="ระบุชื่อและนามสกุล" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เลขประจำตัวประชาชน <span className="text-red-500">*</span></label>
-                  <input required type="text" maxLength={13} placeholder="X-XXXX-XXXXX-XX-X" className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-mono" value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value.replace(/[^0-9]/g, '')})} />
-                </div>
-                {/* ... (โทรศัพท์/อีเมล คงเดิม) ... */}
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
-                    <input required type="tel" placeholder="08X-XXX-XXXX" className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all font-medium" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">อีเมลติดต่อ (ถ้ามี)</label>
-                  <div className="relative group">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-blue-600" />
-                    <input type="email" className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all" placeholder="example@email.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-            </FormSection>
+        <FormSection title="1. ข้อมูลผู้ยื่นคำร้อง">
+  <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+    {/* ชื่อ-นามสกุล */}
+    <div className="space-y-2">
+      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">ชื่อ-นามสกุลจริง <span className="text-red-500">*</span></label>
+      <div className="relative group">
+        <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+        <input required type="text" className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none" placeholder="ระบุชื่อและนามสกุล" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+      </div>
+    </div>
 
+    {/* ✅ เพิ่ม: ตัวเลือกประเภทบุคคล */}
+    <div className="space-y-2">
+      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">ประเภทบุคคล <span className="text-red-500">*</span></label>
+      <div className="flex gap-4 p-1 bg-slate-100 rounded-2xl">
+        <button type="button" onClick={() => setFormData({...formData, isForeigner: 'THAI', passportNumber: ''})} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${formData.isForeigner === 'THAI' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>คนไทย</button>
+        <button type="button" onClick={() => setFormData({...formData, isForeigner: 'FOREIGNER', nationalId: ''})} className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${formData.isForeigner === 'FOREIGNER' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>ชาวต่างชาติ</button>
+      </div>
+    </div>
+
+    {/* ✅ สลับช่องกรอกตามประเภทบุคคล */}
+    {formData.isForeigner === 'THAI' ? (
+      <div className="space-y-2 animate-in fade-in slide-in-from-left-2">
+        <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เลขประจำตัวประชาชน <span className="text-red-500">*</span></label>
+        <input required type="text" maxLength={13} placeholder="X-XXXX-XXXXX-XX-X" className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-mono" value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value.replace(/[^0-9]/g, '')})} />
+      </div>
+    ) : (
+      <div className="space-y-2 animate-in fade-in slide-in-from-right-2">
+        <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">Passport Number <span className="text-red-500">*</span></label>
+        <input required type="text" placeholder="ระบุเลขที่พาสปอร์ต" className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none uppercase font-mono" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value.toUpperCase()})} />
+      </div>
+    )}
+
+    {/* เบอร์โทรศัพท์ (คงเดิม) */}
+    <div className="space-y-2">
+      <label className="block text-[13px] font-semibold text-slate-600 uppercase tracking-wider ml-1">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+      <div className="relative group">
+        <Phone className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+        <input required type="tel" className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+      </div>
+    </div>
+  </div>
+</FormSection>
             {/* ส่วนที่ 2: รายละเอียดเหตุการณ์ */}
             <FormSection title="2. รายละเอียดเหตุการณ์">
               <div className="grid md:grid-cols-2 gap-x-8 gap-y-6 mb-8">
@@ -219,19 +244,36 @@ const RequestView: React.FC<RequestViewProps> = ({
               </div>
 
               {formData.eventType === 'ACCIDENT' && (
-                <div className="mt-8 animate-in fade-in slide-in-from-top-2">
-                  <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">ลักษณะการเกิดอุบัติเหตุ <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <select required className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none" value={formData.accidentSubtype || ''} onChange={e => setFormData({...formData, accidentSubtype: e.target.value})}>
-                      <option value="">-- เลือกลักษณะการเกิดเหตุ --</option>
-                      <option value="MC_VS_MC">1. รถจักรยานยนต์ ชน รถจักรยานยนต์</option>
-                      <option value="MC_VS_CAR">2. รถจักรยานยนต์ ชน รถยนต์</option>
-                      <option value="CAR_VS_CAR">3. รถยนต์ ชน รถยนต์</option>
-                      <option value="PEDESTRIAN">4. ชนคนเดินเท้า</option>
-                      <option value="HIT_AND_RUN">5. ชนแล้วหนี</option>
-                      <option value="OTHER">6. อื่นๆ</option>
-                    </select>
-                    <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
+                <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-top-2">
+                  {/* ลักษณะการเกิดอุบัติเหตุ (เดิม) */}
+                  <div className="space-y-2">
+                    <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">ลักษณะการเกิดอุบัติเหตุ <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                      <select required className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none" value={formData.accidentSubtype || ''} onChange={e => setFormData({...formData, accidentSubtype: e.target.value})}>
+                        <option value="">-- เลือกลักษณะการเกิดเหตุ --</option>
+                        <option value="MC_VS_MC">1. รถจักรยานยนต์ ชน รถจักรยานยนต์</option>
+                        <option value="MC_VS_CAR">2. รถจักรยานยนต์ ชน รถยนต์</option>
+                        <option value="CAR_VS_CAR">3. รถยนต์ ชน รถยนต์</option>
+                        <option value="PEDESTRIAN">4. ชนคนเดินเท้า</option>
+                        <option value="HIT_AND_RUN">5. ชนแล้วหนี</option>
+                        <option value="OTHER">6. อื่นๆ</option>
+                      </select>
+                      <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* ✅ เพิ่มส่วนนี้: คำถามเกี่ยวกับชาวต่างชาติ */}
+                  <div className="space-y-2">
+                    <label className="block text-[13px] font-bold text-blue-700 uppercase tracking-wider ml-1 mb-2">เหตุการณ์นี้เกี่ยวข้องกับชาวต่างชาติหรือไม่ <span className="text-red-500">*</span></label>
+                    <div className="relative group">
+                      <select required className="w-full px-8 py-4 bg-blue-50/50 border-2 border-blue-200 rounded-2xl appearance-none" value={formData.isForeignerInvolved} onChange={e => setFormData({...formData, isForeignerInvolved: e.target.value})}>
+                        <option value="">-- โปรดเลือกคำตอบ --</option>
+                        <option value="YES">เกี่ยวข้อง</option>
+                        <option value="NO">ไม่เกี่ยวข้อง</option>
+                        <option value="NOT_SURE">ไม่แน่ใจ</option>
+                      </select>
+                      <ChevronRight className="absolute right-6 top-6 w-5 h-5 text-blue-400 rotate-90 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
               )}
